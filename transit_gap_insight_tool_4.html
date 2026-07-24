@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CalSTA Data Hub &middot; Transit Gap Insight Tool</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --panel-2: #f6f7f9;
+    --grid-line: rgba(20, 40, 70, 0.035);
+    --hairline: #e3e6eb;
+    --cyan: #0e8a90;
+    --amber: #c8801a;
+    --coral: #c1442e;
+    --indigo: #5b57c9;
+    --text: #16202e;
+    --muted: #6b7686;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    height: 100%;
+  }
+
+  body {
+    background-image:
+      repeating-linear-gradient(0deg, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent 32px),
+      repeating-linear-gradient(90deg, var(--grid-line) 0, var(--grid-line) 1px, transparent 1px, transparent 32px);
+  }
+
+  .app { display: flex; flex-direction: column; height: 100vh; max-height: 100vh; }
+
+  header.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px; border-bottom: 1px solid var(--hairline);
+    flex-shrink: 0; background: #fff;
+  }
+  .brand { display: flex; flex-direction: column; gap: 2px; }
+  .brand .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    color: var(--cyan); text-transform: uppercase;
+  }
+  .brand h1 {
+    font-family: var(--display); font-weight: 600; font-size: 19px;
+    margin: 0; letter-spacing: 0.01em; color: var(--text);
+  }
+  .status-chip {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    border: 1px solid var(--hairline); padding: 5px 10px; border-radius: 3px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); }
+
+  .columns { display: grid; grid-template-columns: 320px 1fr 340px; flex: 1; min-height: 0; }
+
+  .panel {
+    display: flex; flex-direction: column; min-height: 0;
+    border-right: 1px solid var(--hairline); position: relative; background: var(--panel);
+  }
+  .panel:last-child { border-right: none; }
+
+  .panel-head { padding: 12px 16px; border-bottom: 1px solid var(--hairline); flex-shrink: 0; position: relative; }
+  .panel-head .label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .panel-head h2 { font-family: var(--display); font-size: 15px; margin: 2px 0 0 0; font-weight: 600; color: var(--text); }
+  .panel-head::before, .panel-head::after { content: ''; position: absolute; width: 8px; height: 8px; }
+  .panel-head::before { top: 8px; left: 8px; border-top: 1px solid var(--cyan); border-left: 1px solid var(--cyan); opacity: 0.55; }
+  .panel-head::after { top: 8px; right: 8px; border-top: 1px solid var(--cyan); border-right: 1px solid var(--cyan); opacity: 0.55; }
+
+  /* prompt library */
+  .prompt-library {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 10px 12px; border-bottom: 1px solid var(--hairline);
+    flex-shrink: 0; background: var(--panel-2);
+  }
+  .prompt-chip {
+    font-family: var(--body); font-size: 11.5px; line-height: 1.3;
+    background: #fff; border: 1px solid var(--hairline); color: var(--text);
+    padding: 6px 10px; border-radius: 14px; cursor: pointer; text-align: left;
+  }
+  .prompt-chip:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  .chat-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 92%; font-size: 13.5px; line-height: 1.5; padding: 9px 12px; border-radius: 6px; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: rgba(193,68,46,0.08); border: 1px solid rgba(193,68,46,0.28); color: #7a2c1c; }
+  .msg.assistant { align-self: flex-start; background: rgba(14,138,144,0.06); border: 1px solid rgba(14,138,144,0.25); color: var(--text); }
+  .msg.system-note { align-self: center; color: var(--muted); font-family: var(--mono); font-size: 11px; border: none; background: none; text-align: center; }
+  .typing { align-self: flex-start; font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 4px 12px; }
+
+  .chat-input { flex-shrink: 0; border-top: 1px solid var(--hairline); padding: 10px; display: flex; gap: 8px; }
+  .chat-input textarea {
+    flex: 1; resize: none; background: var(--panel-2); border: 1px solid var(--hairline);
+    border-radius: 4px; color: var(--text); font-family: var(--body); font-size: 13px;
+    padding: 8px 10px; height: 40px; line-height: 1.4;
+  }
+  .chat-input textarea:focus { outline: 1px solid var(--cyan); }
+  .chat-input button {
+    background: var(--cyan); color: #fff; border: none; border-radius: 4px;
+    font-family: var(--mono); font-weight: 600; font-size: 12px; padding: 0 16px; cursor: pointer;
+  }
+  .chat-input button:disabled { opacity: 0.4; cursor: default; }
+  .chat-input button:hover:not(:disabled) { filter: brightness(1.1); }
+
+  .map-toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 62%; }
+  .map-toolbar button {
+    background: transparent; color: var(--muted); border: 1px solid var(--hairline);
+    font-family: var(--mono); font-size: 10.5px; padding: 5px 9px; border-radius: 3px; cursor: pointer; white-space: nowrap;
+  }
+  .map-toolbar button:hover { border-color: var(--cyan); color: var(--cyan); }
+  .map-toolbar button.active { background: var(--cyan); color: #fff; border-color: var(--cyan); }
+
+  #map { flex: 1; min-height: 0; }
+
+  .map-hint {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    background: rgba(255,255,255,0.95); border: 1px solid var(--hairline);
+    padding: 6px 12px; border-radius: 3px; z-index: 500; pointer-events: none;
+    box-shadow: 0 2px 8px rgba(20,40,70,0.08); max-width: 90%; text-align: center;
+  }
+
+  .stop-marker {
+    color: #fff; border-radius: 50%; width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+    box-shadow: 0 1px 4px rgba(20,40,70,0.35), 0 0 0 2px #fff;
+  }
+  .proposed-marker {
+    background: var(--panel); border: 2px solid var(--amber); color: var(--amber);
+    border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700; box-shadow: 0 1px 4px rgba(20,40,70,0.25);
+  }
+  .region-marker {
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-family: var(--mono); font-weight: 700; box-shadow: 0 1px 4px rgba(20,40,70,0.3), 0 0 0 2px #fff;
+  }
+
+  .analytics-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .section-title {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin: 4px 0 -4px 0;
+  }
+  .metric-card { border: 1px solid var(--hairline); border-radius: 6px; padding: 12px 14px; position: relative; background: #fff; }
+  .metric-card::before, .metric-card::after { content: ''; position: absolute; width: 6px; height: 6px; }
+  .metric-card::before { bottom: 4px; left: 4px; border-bottom: 1px solid var(--cyan); border-left: 1px solid var(--cyan); opacity: 0.4; }
+  .metric-card::after { bottom: 4px; right: 4px; border-bottom: 1px solid var(--cyan); border-right: 1px solid var(--cyan); opacity: 0.4; }
+  .metric-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .metric-value { font-family: var(--display); font-size: 24px; font-weight: 600; color: var(--text); }
+  .metric-value .unit { font-family: var(--mono); font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .insight-box { border-left: 2px solid var(--cyan); padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--text); background: rgba(14,138,144,0.05); border-radius: 0 4px 4px 0; }
+  .insight-box.warn { border-left-color: var(--amber); background: rgba(200,128,26,0.06); }
+  .flag-list { display: flex; flex-direction: column; gap: 6px; }
+  .flag-item { font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: flex; justify-content: space-between; border-bottom: 1px dashed var(--hairline); padding-bottom: 4px; }
+  .flag-item .tag { color: var(--coral); }
+  .flag-item .tag.ok { color: var(--cyan); }
+  .empty-note { font-family: var(--mono); font-size: 11.5px; color: var(--muted); text-align: center; padding: 20px 10px; }
+
+  .inspector-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .inspector-title { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .type-badge { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; color: #fff; white-space: nowrap; }
+  .owner-line { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .description-text { font-size: 13px; line-height: 1.55; color: var(--text); margin-top: 10px; }
+
+  .inventory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-top: 4px; }
+  .inventory-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); }
+  .inventory-item .mark { font-family: var(--mono); font-size: 11px; width: 14px; text-align: center; }
+  .inventory-item.yes .mark { color: var(--cyan); }
+  .inventory-item.no { color: var(--muted); }
+  .inventory-item.no .mark { color: var(--muted); }
+
+  .usage-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed var(--hairline); }
+  .usage-row:last-child { border-bottom: none; }
+  .usage-row .k { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .usage-row .v { color: var(--text); font-weight: 600; font-family: var(--display); }
+
+  .condition-badge { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 3px; font-weight: 600; }
+  .condition-good { background: rgba(14,138,144,0.12); color: var(--cyan); }
+  .condition-fair { background: rgba(200,128,26,0.14); color: var(--amber); }
+  .condition-poor { background: rgba(193,68,46,0.12); color: var(--coral); }
+
+  .routes-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .route-chip { font-family: var(--mono); font-size: 10.5px; background: var(--panel-2); border: 1px solid var(--hairline); padding: 3px 8px; border-radius: 3px; color: var(--text); }
+
+  .rank-badge {
+    display: inline-block; font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 3px; background: rgba(193,68,46,0.12); color: var(--coral); margin-top: 6px;
+  }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 4px; }
+
+  @media (max-width: 900px) {
+    .columns { grid-template-columns: 1fr; grid-auto-rows: min-content; overflow-y: auto; }
+    .panel { border-right: none; border-bottom: 1px solid var(--hairline); }
+    .chat-body { max-height: 260px; }
+    #map { height: 340px; }
+    .analytics-body { max-height: none; }
+    .map-toolbar { max-width: 100%; }
+  }
+
+  a:focus, button:focus, textarea:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="eyebrow">CalSTA Data Hub &middot; Transit Analytics Workspace</span>
+      <h1>Transit Gap Insight Tool</h1>
+    </div>
+    <div class="status-chip"><span class="dot"></span><span id="stopCountChip">14 stops &middot; 20 regions loaded</span></div>
+  </header>
+
+  <div class="columns">
+
+    <section class="panel" id="chatPanel">
+      <div class="panel-head">
+        <div class="label">Assistant</div>
+        <h2>Planning Chat</h2>
+      </div>
+      <div class="prompt-library" id="promptLibrary">
+        <button class="prompt-chip" data-prompt="Show me all light rail routes">Show me all light rail routes</button>
+        <button class="prompt-chip" data-prompt="Assess transit stop density in my county">Assess transit stop density in my county</button>
+        <button class="prompt-chip" data-prompt="Show me where transit is most consistently delayed in a heat map">Show delayed transit as a heat map</button>
+        <button class="prompt-chip" data-prompt="What areas of San Diego County have the highest equity screening scores and the least density of transit?">Highest equity need + lowest transit density in San Diego County</button>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="msg system-note">Ask about a stop or region you clicked, or try a prompt above.</div>
+      </div>
+      <div class="chat-input">
+        <textarea id="chatInput" placeholder="Ask the planning assistant..."></textarea>
+        <button id="sendBtn">Send</button>
+      </div>
+    </section>
+
+    <section class="panel" id="mapPanel">
+      <div class="panel-head" style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div class="label">Route Canvas</div>
+          <h2>Statewide Stop &amp; Region Map</h2>
+        </div>
+        <div class="map-toolbar">
+          <button id="addModeBtn">+ Add stop</button>
+          <button id="railBtn">Light rail</button>
+          <button id="heatBtn">Delay heat</button>
+          <button id="regionBtn">County Regions</button>
+          <button id="undoBtn">Undo</button>
+          <button id="clearBtn">Clear</button>
+        </div>
+      </div>
+      <div id="map"></div>
+      <div class="map-hint" id="mapHint">Click any marker to view its details</div>
+    </section>
+
+    <section class="panel" id="analyticsPanel">
+      <div class="panel-head">
+        <div class="label">Live Metrics</div>
+        <h2>Instant Insight</h2>
+      </div>
+      <div class="analytics-body" id="analyticsBody">
+        <div class="empty-note">Click a stop or region on the map to view details.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  const TYPE_STYLES = {
+    'Bus Stop':        { color: '#0e8a90', code: 'B' },
+    'Trolley Station': { color: '#5b57c9', code: 'T' },
+    'Ferry Landing':   { color: '#1d6fbf', code: 'F' },
+    'Park & Ride':     { color: '#c8801a', code: 'P' },
+    'Multimodal Hub':  { color: '#c1442e', code: 'M' }
+  };
+
+  const DUMMY_STOPS = [
+    { name: 'Coronado Ferry Landing', type: 'Ferry Landing', owner: 'Port of San Diego', lat: 32.6858, lng: -117.1830,
+      description: 'Passenger ferry terminal linking Coronado to the Broadway Pier in downtown San Diego, with connecting bus service and bike rental on site.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      usage: { avgDailyBoardings: 1450, peakHourBoardings: 210, connectingRoutes: ['Ferry to Broadway Pier', 'MTS Route 904'] },
+      condition: { lastInspected: '2026-05-12', rating: 'Good' }, delayIndex: 25 },
+    { name: 'Orange Ave & B Ave', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.6890, lng: -117.1793,
+      description: 'Curbside stop on Coronado\u2019s main commercial corridor, serving downtown shops and ferry landing walk-up traffic.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: false, bikeRack: false, ada: true, trash: true },
+      usage: { avgDailyBoardings: 310, peakHourBoardings: 48, connectingRoutes: ['MTS Route 901', 'MTS Route 904'] },
+      condition: { lastInspected: '2026-03-02', rating: 'Fair' }, delayIndex: 30 },
+    { name: 'Hotel del Coronado', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.6828, lng: -117.1734,
+      description: 'High-tourism stop directly serving the Hotel del Coronado resort and adjacent beach access points.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      usage: { avgDailyBoardings: 580, peakHourBoardings: 95, connectingRoutes: ['MTS Route 901'] },
+      condition: { lastInspected: '2026-06-01', rating: 'Good' }, delayIndex: 20 },
+    { name: 'NAS North Island Gate', type: 'Bus Stop', owner: 'MTS / U.S. Navy (shared access)', lat: 32.7010, lng: -117.2130,
+      description: 'Stop serving the main gate of Naval Air Station North Island, primarily used by base personnel and contractors.',
+      inventory: { shelter: false, bench: true, lighting: true, realTimeSignage: false, bikeRack: false, ada: true, trash: false },
+      usage: { avgDailyBoardings: 420, peakHourBoardings: 180, connectingRoutes: ['MTS Route 904'] },
+      condition: { lastInspected: '2025-11-19', rating: 'Fair' }, delayIndex: 40 },
+    { name: 'Coronado Bridge Park & Ride', type: 'Park & Ride', owner: 'Caltrans District 11', lat: 32.6975, lng: -117.1465,
+      description: 'State-owned park-and-ride lot at the San Diego-side approach to the Coronado Bridge.',
+      inventory: { shelter: true, bench: false, lighting: true, realTimeSignage: false, bikeRack: true, ada: true, trash: true },
+      usage: { avgDailyBoardings: 265, peakHourBoardings: 140, connectingRoutes: ['MTS Route 901'] },
+      condition: { lastInspected: '2026-01-22', rating: 'Fair' }, delayIndex: 55 },
+    { name: 'Barrio Logan Trolley Station', type: 'Trolley Station', owner: 'SANDAG / San Diego Trolley Inc.', lat: 32.6989, lng: -117.1417,
+      description: 'Blue Line light rail station serving the Barrio Logan neighborhood, with direct pedestrian access to the Coronado Bridge bike path.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      usage: { avgDailyBoardings: 1890, peakHourBoardings: 310, connectingRoutes: ['Blue Line', 'MTS Route 11'] },
+      condition: { lastInspected: '2026-04-08', rating: 'Good' }, delayIndex: 45 },
+    { name: 'City College Station', type: 'Trolley Station', owner: 'SANDAG / San Diego Trolley Inc.', lat: 32.7133, lng: -117.1567,
+      description: 'Downtown multi-line trolley station adjacent to San Diego City College, one of the busiest boarding points in the core.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      usage: { avgDailyBoardings: 4200, peakHourBoardings: 680, connectingRoutes: ['Blue Line', 'Orange Line', 'Green Line'] },
+      condition: { lastInspected: '2026-06-15', rating: 'Good' }, delayIndex: 70 },
+    { name: 'Santa Fe Depot', type: 'Multimodal Hub', owner: 'SANDAG / Amtrak / NCTD', lat: 32.7157, lng: -117.1697,
+      description: 'Regional multimodal hub combining Amtrak Pacific Surfliner, Coaster commuter rail, and trolley service near the Embarcadero.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      usage: { avgDailyBoardings: 6100, peakHourBoardings: 890, connectingRoutes: ['Amtrak Pacific Surfliner', 'Coaster', 'Blue Line', 'Orange Line'] },
+      condition: { lastInspected: '2026-05-28', rating: 'Good' }, delayIndex: 65 },
+    { name: 'Gaslamp Quarter Trolley Stop', type: 'Trolley Station', owner: 'SANDAG / San Diego Trolley Inc.', lat: 32.7100, lng: -117.1611,
+      description: 'Entertainment-district station with heavy weekend and evening ridership tied to nightlife and Petco Park events.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: false, ada: true, trash: true },
+      usage: { avgDailyBoardings: 2650, peakHourBoardings: 520, connectingRoutes: ['Orange Line', 'Green Line'] },
+      condition: { lastInspected: '2026-02-14', rating: 'Good' }, delayIndex: 75 },
+    { name: 'Broadway & Harbor Dr', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.7147, lng: -117.1733,
+      description: 'Waterfront stop near the cruise ship terminal and USS Midway Museum, serving visitors and downtown commuters.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: false, bikeRack: false, ada: true, trash: true },
+      usage: { avgDailyBoardings: 740, peakHourBoardings: 130, connectingRoutes: ['MTS Route 923', 'MTS Route 992'] },
+      condition: { lastInspected: '2025-12-05', rating: 'Fair' }, delayIndex: 50 },
+    { name: 'Coronado Cays', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.6483, lng: -117.1417,
+      description: 'Low-frequency residential stop serving the gated Coronado Cays community at the south end of the peninsula.',
+      inventory: { shelter: false, bench: false, lighting: false, realTimeSignage: false, bikeRack: false, ada: false, trash: false },
+      usage: { avgDailyBoardings: 35, peakHourBoardings: 8, connectingRoutes: ['MTS Route 904'] },
+      condition: { lastInspected: '2025-09-30', rating: 'Poor' }, delayIndex: 15 },
+    { name: 'Silver Strand State Beach', type: 'Bus Stop', owner: 'Caltrans District 11 / CA State Parks', lat: 32.6650, lng: -117.1450,
+      description: 'Seasonal beach-access stop along Highway 75, with ridership that spikes sharply on summer weekends.',
+      inventory: { shelter: false, bench: true, lighting: false, realTimeSignage: false, bikeRack: false, ada: true, trash: true },
+      usage: { avgDailyBoardings: 90, peakHourBoardings: 55, connectingRoutes: ['MTS Route 904'] },
+      condition: { lastInspected: '2025-08-17', rating: 'Fair' }, delayIndex: 20 },
+    { name: 'Imperial Ave Transit Center', type: 'Multimodal Hub', owner: 'SANDAG / MTS', lat: 32.7009, lng: -117.1288,
+      description: 'Southeast San Diego transfer hub linking trolley, bus rapid transit, and local bus routes near Interstate 5.',
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      usage: { avgDailyBoardings: 3100, peakHourBoardings: 540, connectingRoutes: ['Blue Line', 'Orange Line', 'Rapid 215'] },
+      condition: { lastInspected: '2026-04-30', rating: 'Good' }, delayIndex: 60 },
+    { name: 'Coronado Golf Course', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.6942, lng: -117.1685,
+      description: 'Quiet stop serving the municipal golf course and adjacent Glorietta Bay recreational area.',
+      inventory: { shelter: true, bench: true, lighting: false, realTimeSignage: false, bikeRack: false, ada: true, trash: true },
+      usage: { avgDailyBoardings: 120, peakHourBoardings: 22, connectingRoutes: ['MTS Route 901'] },
+      condition: { lastInspected: '2026-02-27', rating: 'Fair' }, delayIndex: 18 }
+  ];
+
+  // ---------------- SAN DIEGO COUNTY REGIONS ----------------
+  const REGIONS = [
+    { name: 'Coronado', county: 'San Diego', lat: 32.6859, lng: -117.1831, population: 24000, equityScore: 40, density: 2.2, delayIndex: 35 },
+    { name: 'Downtown San Diego', county: 'San Diego', lat: 32.7157, lng: -117.1611, population: 35000, equityScore: 68, density: 5.2, delayIndex: 68 },
+    { name: 'City Heights', county: 'San Diego', lat: 32.7538, lng: -117.1150, population: 82000, equityScore: 85, density: 3.6, delayIndex: 58 },
+    { name: 'Southeastern San Diego (Encanto)', county: 'San Diego', lat: 32.7057, lng: -117.0810, population: 90000, equityScore: 88, density: 2.8, delayIndex: 50 },
+    { name: 'National City', county: 'San Diego', lat: 32.6781, lng: -117.0992, population: 61000, equityScore: 84, density: 3.3, delayIndex: 47 },
+    { name: 'Chula Vista', county: 'San Diego', lat: 32.6401, lng: -117.0842, population: 275000, equityScore: 70, density: 2.5, delayIndex: 42 },
+    { name: 'San Ysidro', county: 'San Diego', lat: 32.5575, lng: -117.0311, population: 30000, equityScore: 90, density: 2.0, delayIndex: 45 },
+    { name: 'Imperial Beach', county: 'San Diego', lat: 32.5836, lng: -117.1131, population: 27000, equityScore: 66, density: 1.6, delayIndex: 30 },
+    { name: 'Lemon Grove', county: 'San Diego', lat: 32.7425, lng: -117.0311, population: 26000, equityScore: 64, density: 1.9, delayIndex: 33 },
+    { name: 'La Mesa', county: 'San Diego', lat: 32.7678, lng: -117.0231, population: 61000, equityScore: 52, density: 2.3, delayIndex: 35 },
+    { name: 'El Cajon', county: 'San Diego', lat: 32.7948, lng: -116.9625, population: 105000, equityScore: 72, density: 2.2, delayIndex: 40 },
+    { name: 'Santee', county: 'San Diego', lat: 32.8384, lng: -116.9739, population: 60000, equityScore: 44, density: 1.2, delayIndex: 25 },
+    { name: 'Poway', county: 'San Diego', lat: 32.9628, lng: -117.0359, population: 49000, equityScore: 22, density: 0.8, delayIndex: 15 },
+    { name: 'Rancho Bernardo', county: 'San Diego', lat: 32.9829, lng: -117.0672, population: 60000, equityScore: 28, density: 1.0, delayIndex: 20 },
+    { name: 'Escondido', county: 'San Diego', lat: 33.1192, lng: -117.0864, population: 152000, equityScore: 60, density: 1.8, delayIndex: 34 },
+    { name: 'San Marcos', county: 'San Diego', lat: 33.1434, lng: -117.1661, population: 96000, equityScore: 48, density: 1.5, delayIndex: 28 },
+    { name: 'Vista', county: 'San Diego', lat: 33.2000, lng: -117.2425, population: 101000, equityScore: 63, density: 1.6, delayIndex: 30 },
+    { name: 'Oceanside', county: 'San Diego', lat: 33.1959, lng: -117.3795, population: 175000, equityScore: 61, density: 2.0, delayIndex: 33 },
+    { name: 'Ramona', county: 'San Diego', lat: 33.0417, lng: -116.8675, population: 20000, equityScore: 58, density: 0.3, delayIndex: 12 },
+    { name: 'Julian', county: 'San Diego', lat: 33.0786, lng: -116.6019, population: 1500, equityScore: 62, density: 0.1, delayIndex: 8 },
+    { name: 'Borrego Springs', county: 'San Diego', lat: 33.2561, lng: -116.3753, population: 3400, equityScore: 72, density: 0.05, delayIndex: 6 }
+  ];
+
+  // Precompute a "transit gap" ranking: high equity need + low transit density.
+  const maxDensity = Math.max(...REGIONS.map(r => r.density));
+  REGIONS.forEach(r => {
+    const densityNorm = r.density / maxDensity;
+    r.gapScore = Math.round(r.equityScore * (1 - densityNorm));
+  });
+  const GAP_RANKING = [...REGIONS].sort((a, b) => b.gapScore - a.gapScore);
+
+  // Fold stop-level data into the same named geography as the county regions:
+  // each stop is tagged with its nearest region so a click surfaces both
+  // granularities together.
+  DUMMY_STOPS.forEach((stop) => {
+    let nearest = null, nearestDist = Infinity;
+    REGIONS.forEach((region) => {
+      const dist = haversineKm(stop.lat, stop.lng, region.lat, region.lng);
+      if (dist < nearestDist) { nearestDist = dist; nearest = region; }
+    });
+    stop.region = nearest;
+  });
+
+  // ---------------- LIGHT RAIL / PASSENGER RAIL ROUTES ----------------
+  const ROUTES = [
+    { name: 'Blue Line (San Diego Trolley)', county: 'San Diego', color: '#0057b8',
+      coords: [[32.6989,-117.1417],[32.7009,-117.1288],[32.7133,-117.1567],[32.7157,-117.1697],[32.76,-117.19],[32.82,-117.20],[32.87,-117.21]] },
+    { name: 'Orange Line (San Diego Trolley)', county: 'San Diego', color: '#f7941d',
+      coords: [[32.7157,-117.1697],[32.7133,-117.1567],[32.7100,-117.1611],[32.7009,-117.1288],[32.79,-117.02],[32.80,-116.96]] },
+    { name: 'Green Line (San Diego Trolley)', county: 'San Diego', color: '#00a651',
+      coords: [[32.7133,-117.1567],[32.7100,-117.1611],[32.77,-117.15],[32.78,-117.10],[32.80,-117.07]] },
+    { name: 'SPRINTER (Oceanside \u2013 Escondido)', county: 'San Diego', color: '#6b3fa0',
+      coords: [[33.1959,-117.3795],[33.2000,-117.2425],[33.1434,-117.1661],[33.1192,-117.0864]] }
+  ];
+
+  let selectedItem = null; // { kind: 'stop' | 'region', data }
+
+  const map = L.map('map', { zoomControl: true }).setView([32.6975, -117.1611], 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO', maxZoom: 20
+  }).addTo(map);
+
+  function makeDummyIcon(type) {
+    const style = TYPE_STYLES[type] || { color: '#333', code: '?' };
+    return L.divIcon({ className: '', html: `<div class="stop-marker" style="background:${style.color};">${style.code}</div>`, iconSize: [24,24], iconAnchor: [12,12] });
+  }
+
+  DUMMY_STOPS.forEach((stop) => {
+    const marker = L.marker([stop.lat, stop.lng], { icon: makeDummyIcon(stop.type) }).addTo(map);
+    marker.on('click', (e) => { L.DomEvent.stopPropagation(e); selectItem('stop', stop); });
+    stop._marker = marker;
+  });
+
+  // ---- Region layer (San Diego County) ----
+  function equityColor(score) {
+    if (score >= 75) return '#c1442e';
+    if (score >= 50) return '#c8801a';
+    return '#0e8a90';
+  }
+  const regionLayerGroup = L.layerGroup();
+  REGIONS.forEach((region) => {
+    const radius = Math.max(6, 16 - region.density * 2.5);
+    const marker = L.circleMarker([region.lat, region.lng], {
+      radius, color: '#fff', weight: 2, fillColor: equityColor(region.equityScore), fillOpacity: 0.85
+    });
+    marker.on('click', (e) => { L.DomEvent.stopPropagation(e); selectItem('region', region); });
+    marker.addTo(regionLayerGroup);
+    region._marker = marker;
+  });
+
+  // ---- Light rail / rail route layer ----
+  const railLayerGroup = L.layerGroup();
+  ROUTES.forEach((route) => {
+    L.polyline(route.coords, { color: route.color, weight: 4, opacity: 0.85 })
+      .bindTooltip(route.name, { sticky: true })
+      .addTo(railLayerGroup);
+  });
+
+  // ---- Delay heat layer: color-codes the transit route lines themselves ----
+  // using a purple (low delay) -> red (high delay) scale, interpolated from
+  // the stop- and region-level delay data via inverse-distance weighting.
+  function heatColor(delay) {
+    const clamped = Math.max(0, Math.min(100, delay));
+    const hue = (280 + clamped * 0.8) % 360; // 280=violet, ~320=magenta, 360/0=red
+    return `hsl(${hue}, 74%, 44%)`;
+  }
+
+  const DELAY_POINTS = [
+    ...DUMMY_STOPS.map(s => ({ lat: s.lat, lng: s.lng, delay: s.delayIndex })),
+    ...REGIONS.map(r => ({ lat: r.lat, lng: r.lng, delay: r.delayIndex }))
+  ];
+
+  function interpolatedDelay(lat, lng) {
+    let wSum = 0, vSum = 0;
+    DELAY_POINTS.forEach(p => {
+      const d = Math.max(haversineKm(lat, lng, p.lat, p.lng), 0.05);
+      const w = 1 / (d * d);
+      wSum += w; vSum += w * p.delay;
+    });
+    return vSum / wSum;
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  const heatLayerGroup = L.layerGroup();
+  ROUTES.forEach((route) => {
+    const SUBDIVISIONS = 6;
+    for (let i = 0; i < route.coords.length - 1; i++) {
+      const [lat1, lng1] = route.coords[i];
+      const [lat2, lng2] = route.coords[i + 1];
+      for (let s = 0; s < SUBDIVISIONS; s++) {
+        const t0 = s / SUBDIVISIONS, t1 = (s + 1) / SUBDIVISIONS;
+        const p0 = [lerp(lat1, lat2, t0), lerp(lng1, lng2, t0)];
+        const p1 = [lerp(lat1, lat2, t1), lerp(lng1, lng2, t1)];
+        const midLat = lerp(p0[0], p1[0], 0.5), midLng = lerp(p0[1], p1[1], 0.5);
+        const delay = interpolatedDelay(midLat, midLng);
+        L.polyline([p0, p1], { color: heatColor(delay), weight: 6, opacity: 0.9 })
+          .bindTooltip(`${route.name} &middot; delay index ~${Math.round(delay)}/100`, { sticky: true })
+          .addTo(heatLayerGroup);
+      }
+    }
+  });
+
+  // ---- Proposed stops (user-added) ----
+  const proposedStops = [];
+  let nextId = 1;
+  let addMode = false;
+  let polyline = L.polyline([], { color: '#c8801a', weight: 2, dashArray: '6 6', opacity: 0.85 }).addTo(map);
+
+  function makeProposedIcon(n) { return L.divIcon({ className: '', html: `<div class="proposed-marker">${n}</div>`, iconSize:[24,24], iconAnchor:[12,12] }); }
+  function renumberProposed() { proposedStops.forEach((s,i) => s.marker.setIcon(makeProposedIcon(i+1))); }
+  function redrawLine() { polyline.setLatLngs(proposedStops.map(s => [s.lat, s.lng])); }
+  function removeProposed(id) {
+    const idx = proposedStops.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    map.removeLayer(proposedStops[idx].marker);
+    proposedStops.splice(idx, 1);
+    renumberProposed(); redrawLine(); updateAnalyticsPanel();
+  }
+  function addProposed(lat, lng) {
+    const id = nextId++;
+    const marker = L.marker([lat, lng], { icon: makeProposedIcon(proposedStops.length+1) }).addTo(map);
+    marker.on('click', (e) => { L.DomEvent.stopPropagation(e); removeProposed(id); });
+    proposedStops.push({ id, lat, lng, marker });
+    redrawLine(); updateAnalyticsPanel();
+  }
+  map.on('click', (e) => { if (addMode) addProposed(e.latlng.lat, e.latlng.lng); });
+
+  // ---- Toolbar ----
+  const addModeBtn = document.getElementById('addModeBtn');
+  const railBtn = document.getElementById('railBtn');
+  const heatBtn = document.getElementById('heatBtn');
+  const regionBtn = document.getElementById('regionBtn');
+  const mapHint = document.getElementById('mapHint');
+
+  addModeBtn.addEventListener('click', () => {
+    addMode = !addMode;
+    addModeBtn.classList.toggle('active', addMode);
+    mapHint.textContent = addMode ? 'Click the map to add a proposed stop' : 'Click any marker to view its details';
+  });
+
+  function setRailLayer(on) {
+    railBtn.classList.toggle('active', on);
+    if (on) { railLayerGroup.addTo(map); fitToCoords(ROUTES.flatMap(r => r.coords)); }
+    else map.removeLayer(railLayerGroup);
+  }
+  function setHeatLayer(on) {
+    heatBtn.classList.toggle('active', on);
+    if (on) { heatLayerGroup.addTo(map); fitToCoords(ROUTES.flatMap(r => r.coords)); }
+    else map.removeLayer(heatLayerGroup);
+  }
+  function setRegionLayer(on, fly) {
+    regionBtn.classList.toggle('active', on);
+    if (on) { regionLayerGroup.addTo(map); if (fly) fitToCoords(REGIONS.map(r=>[r.lat,r.lng])); }
+    else map.removeLayer(regionLayerGroup);
+  }
+  function fitToCoords(coords) {
+    if (!coords.length) return;
+    map.fitBounds(L.latLngBounds(coords).pad(0.15));
+  }
+
+  railBtn.addEventListener('click', () => setRailLayer(!map.hasLayer(railLayerGroup)));
+  heatBtn.addEventListener('click', () => setHeatLayer(!map.hasLayer(heatLayerGroup)));
+  regionBtn.addEventListener('click', () => setRegionLayer(!map.hasLayer(regionLayerGroup), true));
+
+  document.getElementById('undoBtn').addEventListener('click', () => { if (proposedStops.length) removeProposed(proposedStops[proposedStops.length-1].id); });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    [...proposedStops].forEach(s => map.removeLayer(s.marker));
+    proposedStops.length = 0; redrawLine(); updateAnalyticsPanel();
+  });
+
+  // ---------------- ANALYTICS ----------------
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+  function computeRouteMetrics() {
+    const n = proposedStops.length;
+    const segments = [];
+    for (let i=1;i<n;i++) {
+      const km = haversineKm(proposedStops[i-1].lat, proposedStops[i-1].lng, proposedStops[i].lat, proposedStops[i].lng);
+      segments.push({ from:i, to:i+1, meters: km*1000 });
+    }
+    const totalKm = segments.reduce((s,x)=>s+x.meters,0)/1000;
+    const avgSpacingM = segments.length ? segments.reduce((s,x)=>s+x.meters,0)/segments.length : 0;
+    const flags = segments.map(s => {
+      let tag='ok', label='within range';
+      if (s.meters<150) { tag='warn'; label='too close'; } else if (s.meters>900) { tag='warn'; label='wide gap'; }
+      return {...s, tag, label};
+    });
+    return { n, totalKm, avgSpacingM, flags };
+  }
+  function fmt(n,d=1){ return Number.isFinite(n)?n.toFixed(d):'0'; }
+  function fmtNum(n){ return n.toLocaleString('en-US'); }
+  function conditionClass(r){ return r==='Good'?'condition-good':r==='Fair'?'condition-fair':'condition-poor'; }
+  function inventoryItem(label, value){ return `<div class="inventory-item ${value?'yes':'no'}"><span class="mark">${value?'\u2713':'\u2013'}</span>${label}</div>`; }
+
+  function renderStopCard(stop) {
+    const style = TYPE_STYLES[stop.type] || { color:'#333' };
+    const inv = stop.inventory, usage = stop.usage, cond = stop.condition;
+    const region = stop.region;
+    const regionHtml = region ? `
+      <div class="metric-card">
+        <div class="metric-label">Neighborhood Context &mdash; ${region.name}</div>
+        <div class="usage-row"><span class="k">Equity screening score</span><span class="v">${region.equityScore}/100</span></div>
+        <div class="usage-row"><span class="k">Transit stop density</span><span class="v">${region.density}/sq mi</span></div>
+        <div class="usage-row"><span class="k">Regional delay index</span><span class="v">${region.delayIndex}/100</span></div>
+      </div>` : '';
+    return `
+      <div class="metric-card">
+        <div class="inspector-header">
+          <div class="inspector-title">${stop.name}</div>
+          <span class="type-badge" style="background:${style.color};">${stop.type}</span>
+        </div>
+        <div class="owner-line">Owner / Operator: ${stop.owner}${region ? ` &middot; ${region.name}` : ''}</div>
+        <div class="description-text">${stop.description}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Inventory</div>
+        <div class="inventory-grid">
+          ${inventoryItem('Shelter', inv.shelter)}${inventoryItem('Bench', inv.bench)}
+          ${inventoryItem('Lighting', inv.lighting)}${inventoryItem('Real-time signage', inv.realTimeSignage)}
+          ${inventoryItem('Bike rack', inv.bikeRack)}${inventoryItem('ADA accessible', inv.ada)}
+          ${inventoryItem('Trash receptacle', inv.trash)}
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Usage</div>
+        <div class="usage-row"><span class="k">Avg. daily boardings</span><span class="v">${fmtNum(usage.avgDailyBoardings)}</span></div>
+        <div class="usage-row"><span class="k">Peak hour boardings</span><span class="v">${fmtNum(usage.peakHourBoardings)}</span></div>
+        <div class="usage-row"><span class="k">Delay index</span><span class="v">${stop.delayIndex}/100</span></div>
+        <div class="routes-list">${usage.connectingRoutes.map(r=>`<span class="route-chip">${r}</span>`).join('')}</div>
+      </div>
+      ${regionHtml}
+      <div class="metric-card">
+        <div class="metric-label">Condition</div>
+        <div class="usage-row"><span class="k">Last inspected</span><span class="v" style="font-family:var(--mono); font-size:12px;">${cond.lastInspected}</span></div>
+        <div style="margin-top:6px;"><span class="condition-badge ${conditionClass(cond.rating)}">${cond.rating}</span></div>
+      </div>
+    `;
+  }
+
+  function renderRegionCard(region) {
+    const rank = GAP_RANKING.findIndex(r => r.name === region.name) + 1;
+    const rankHtml = rank <= 5 ? `<div class="rank-badge">#${rank} highest transit gap priority in San Diego County</div>` : '';
+    return `
+      <div class="metric-card">
+        <div class="inspector-header">
+          <div class="inspector-title">${region.name}</div>
+          <span class="type-badge" style="background:${equityColor(region.equityScore)};">County Region</span>
+        </div>
+        <div class="owner-line">County: ${region.county} &middot; Population: ${fmtNum(region.population)}</div>
+        ${rankHtml}
+      </div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Equity Screening Score</div>
+          <div class="metric-value">${region.equityScore}<span class="unit">/100</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Transit Stop Density</div>
+          <div class="metric-value">${region.density}<span class="unit">/sq mi</span></div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Delay Index</div>
+        <div class="metric-value">${region.delayIndex}<span class="unit">/100</span></div>
+      </div>
+    `;
+  }
+
+  function renderRouteSection() {
+    const { n, totalKm, avgSpacingM, flags } = computeRouteMetrics();
+    if (n === 0) return '';
+    const warnCount = flags.filter(f=>f.tag==='warn').length;
+    let insightHtml;
+    if (n === 1) insightHtml = `<div class="insight-box">Single proposed stop placed. Add another to evaluate spacing.</div>`;
+    else if (warnCount === 0) insightHtml = `<div class="insight-box">All ${flags.length} segment${flags.length===1?'':'s'} fall within a typical urban spacing range (150&ndash;900m).</div>`;
+    else insightHtml = `<div class="insight-box warn">${warnCount} of ${flags.length} segment${flags.length===1?'':'s'} fall outside typical spacing guidance.</div>`;
+    const flagListHtml = flags.map(f => `<div class="flag-item"><span>Stop ${f.from} &rarr; ${f.to}</span><span>${fmt(f.meters,0)}m &middot; <span class="tag ${f.tag==='ok'?'ok':''}">${f.label}</span></span></div>`).join('');
+    return `
+      <div class="section-title">Your Proposed Additions</div>
+      <div class="metric-grid">
+        <div class="metric-card"><div class="metric-label">Proposed Stops</div><div class="metric-value">${n}</div></div>
+        <div class="metric-card"><div class="metric-label">Route Length</div><div class="metric-value">${fmt(totalKm,2)}<span class="unit">km</span></div></div>
+      </div>
+      ${insightHtml}
+      ${flags.length ? `<div class="metric-card"><div class="metric-label">Segment Spacing Detail</div><div class="flag-list">${flagListHtml}</div></div>` : ''}
+    `;
+  }
+
+  function updateAnalyticsPanel() {
+    const body = document.getElementById('analyticsBody');
+    const routeHtml = renderRouteSection();
+    if (!selectedItem) {
+      body.innerHTML = (routeHtml ? '' : '<div class="empty-note">Click a stop or region on the map to view details.</div>') + routeHtml;
+      return;
+    }
+    const card = selectedItem.kind === 'stop' ? renderStopCard(selectedItem.data) : renderRegionCard(selectedItem.data);
+    body.innerHTML = `<div class="section-title">Selected ${selectedItem.kind === 'stop' ? 'Stop' : 'Region'}</div>${card}${routeHtml}`;
+  }
+
+  function selectItem(kind, data) { selectedItem = { kind, data }; updateAnalyticsPanel(); }
+
+  // ---------------- CHAT ----------------
+  const chatBody = document.getElementById('chatBody');
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const chatHistory = [];
+
+  function appendMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.textContent = text;
+    chatBody.appendChild(div);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return div;
+  }
+
+  function handlePromptSideEffects(text) {
+    const t = text.toLowerCase();
+    const notes = [];
+    if (t.includes('light rail') || t.includes('rail route')) { setRailLayer(true); notes.push('Showing light rail & passenger rail routes on the map.'); }
+    if (t.includes('heat map') || t.includes('delay')) { setHeatLayer(true); notes.push('Colored the transit routes by delay (purple = low, red = high).'); }
+    if (t.includes('density') || t.includes('equity') || t.includes('gap') || t.includes('county')) {
+      setRegionLayer(true, true);
+      notes.push('Switched the map to San Diego County regional data.');
+    }
+    if (notes.length) appendMessage('system-note', notes.join(' '));
+  }
+
+  // ---------------- LOCAL DATA-DRIVEN RESPONDER ----------------
+  // Answers are generated entirely from the dummy dataset already loaded in
+  // this workspace -- no external API call, so it always works offline.
+  function selectedContextNote() {
+    if (!selectedItem) return '';
+    if (selectedItem.kind === 'stop') {
+      const s = selectedItem.data;
+      return `\n\n(Currently selected: ${s.name}, a ${s.type} owned by ${s.owner}, avg ${fmtNum(s.usage.avgDailyBoardings)} daily boardings, delay index ${s.delayIndex}/100.)`;
+    }
+    const r = selectedItem.data;
+    return `\n\n(Currently selected: ${r.name}, ${r.county} County -- equity score ${r.equityScore}/100, density ${r.density}/sq mi, delay index ${r.delayIndex}/100.)`;
+  }
+
+  function generateAssistantReply(text) {
+    const t = text.toLowerCase();
+
+    // Equity + density gap question (San Diego County)
+    if ((t.includes('equity') || t.includes('screening') || t.includes('gap')) && (t.includes('density') || t.includes('transit') || t.includes('san diego') || t.includes('county'))) {
+      const top5 = GAP_RANKING.slice(0, 5)
+        .map((r, i) => `${i + 1}. ${r.name} -- equity ${r.equityScore}/100, density ${r.density}/sq mi`)
+        .join('\n');
+      return `San Diego County areas with the highest equity screening scores and the lowest transit stop density (highest transit gap priority):\n\n${top5}\n\nThe backcountry and rural desert communities (Borrego Springs, Julian, Ramona) and the San Ysidro border community show the sharpest mismatch between need and service. Map switched to the San Diego County region view.${selectedContextNote()}`;
+    }
+
+    // Light rail routes
+    if (t.includes('light rail') || t.includes('rail route')) {
+      const list = ROUTES.map(r => `- ${r.name} (${r.county} County)`).join('\n');
+      return `Light rail and passenger rail routes currently loaded:\n\n${list}\n\nI've drawn all of these on the map canvas.${selectedContextNote()}`;
+    }
+
+    // Delay / heat map
+    if (t.includes('heat map') || t.includes('delay')) {
+      const combined = [
+        ...DUMMY_STOPS.map(s => ({ name: s.name, delayIndex: s.delayIndex, place: 'San Diego / Coronado' })),
+        ...REGIONS.map(r => ({ name: r.name, delayIndex: r.delayIndex, place: 'San Diego County region' }))
+      ].sort((a, b) => b.delayIndex - a.delayIndex).slice(0, 6);
+      const list = combined.map((x, i) => `${i + 1}. ${x.name} (${x.place}) -- delay index ${x.delayIndex}/100`).join('\n');
+      return `Highest delay index across the loaded dataset:\n\n${list}\n\nThe transit routes are now color-coded by delay -- purple segments run smoothly, red segments see the most consistent delay.${selectedContextNote()}`;
+    }
+
+    // Density in "my county" (generic, assume San Diego)
+    if (t.includes('density')) {
+      const sorted = [...REGIONS].sort((a, b) => a.density - b.density);
+      const lowest = sorted.slice(0, 5).map((r, i) => `${i + 1}. ${r.name} -- ${r.density}/sq mi`).join('\n');
+      const highest = sorted.slice(-3).reverse().map((r, i) => `${i + 1}. ${r.name} -- ${r.density}/sq mi`).join('\n');
+      return `Assuming "my county" means San Diego County, since that's where detailed regional density data is loaded:\n\nLowest stop density:\n${lowest}\n\nHighest stop density:\n${highest}\n\nThe rural backcountry and desert communities (Borrego Springs, Julian, Ramona) are consistently the least dense, while the urban core and South Bay corridor carry the highest density.${selectedContextNote()}`;
+    }
+
+    // Direct question about the selected stop/region
+    if (selectedItem && (t.includes('this stop') || t.includes('this region') || t.includes('selected') || t.includes('tell me about') || t.includes('who owns'))) {
+      if (selectedItem.kind === 'stop') {
+        const s = selectedItem.data;
+        return `${s.name} is a ${s.type} owned/operated by ${s.owner}.\n\n${s.description}\n\nAvg daily boardings: ${fmtNum(s.usage.avgDailyBoardings)} | Peak hour: ${fmtNum(s.usage.peakHourBoardings)} | Delay index: ${s.delayIndex}/100 | Condition: ${s.condition.rating} (last inspected ${s.condition.lastInspected}).`;
+      }
+      const r = selectedItem.data;
+      const rank = GAP_RANKING.findIndex(x => x.name === r.name) + 1;
+      return `${r.name} is in ${r.county} County, population ${fmtNum(r.population)}.\n\nEquity screening score: ${r.equityScore}/100 | Transit stop density: ${r.density}/sq mi | Delay index: ${r.delayIndex}/100.\n\nIt ranks #${rank} of 19 on the transit-gap priority list (highest equity need combined with lowest density).`;
+    }
+
+    // Fallback
+    return `I can answer questions using the data loaded in this workspace: 14 stops around Coronado/San Diego (inventory, usage, ownership) and 20 San Diego County regions (equity score, transit density, delay index).\n\nTry one of the prompts above, or ask about a specific stop or region you've clicked on the map.${selectedContextNote()}`;
+  }
+
+  function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+    chatInput.value = '';
+    appendMessage('user', text);
+    handlePromptSideEffects(text);
+    sendBtn.disabled = true;
+
+    const typingEl = document.createElement('div');
+    typingEl.className = 'typing';
+    typingEl.textContent = 'assistant is thinking...';
+    chatBody.appendChild(typingEl);
+    chatBody.scrollTop = chatBody.scrollHeight;
+
+    setTimeout(() => {
+      typingEl.remove();
+      const reply = generateAssistantReply(text);
+      appendMessage('assistant', reply);
+      sendBtn.disabled = false;
+    }, 500 + Math.random() * 400);
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+  document.querySelectorAll('.prompt-chip').forEach(btn => {
+    btn.addEventListener('click', () => { chatInput.value = btn.dataset.prompt; sendMessage(); });
+  });
+
+  // ---------------- INIT ----------------
+  updateAnalyticsPanel();
+  setTimeout(() => map.invalidateSize(), 200);
+})();
+</script>
+
+</body>
+</html>
