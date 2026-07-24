@@ -43,6 +43,39 @@
 
   .app { display: flex; flex-direction: column; height: 100vh; max-height: 100vh; }
 
+  .app-footer {
+    flex-shrink: 0; padding: 6px 22px; border-top: 1px solid var(--hairline);
+    background: var(--panel-2); font-family: var(--mono); font-size: 10px; color: var(--muted);
+    text-align: center;
+  }
+
+  .brief-btn {
+    font-family: var(--mono); font-size: 10px; color: var(--cyan); background: none;
+    border: 1px solid var(--cyan); border-radius: 3px; padding: 3px 8px; cursor: pointer;
+    margin-top: 6px; display: inline-block;
+  }
+  .brief-btn:hover { background: var(--cyan); color: #fff; }
+
+  .print-only { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    .print-only, .print-only * { visibility: visible; }
+    .print-only { position: absolute; top: 0; left: 0; width: 100%; padding: 30px; display: block; }
+    .print-only, .print-only * {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;
+    }
+    .print-only h1 { font-family: var(--display); font-size: 22px; margin: 0 0 4px 0; }
+    .print-only .p-sub { font-family: var(--mono); font-size: 11px; color: #555; margin-bottom: 18px; }
+    .print-only h2 { font-family: var(--display); font-size: 15px; margin: 20px 0 8px 0; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    .print-only table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+    .print-only th, .print-only td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #ddd; }
+    .print-only .p-footer { font-family: var(--mono); font-size: 9px; color: #777; margin-top: 24px; }
+    .print-only .eo-line { font-size: 12px; margin-bottom: 5px; }
+    .print-only svg circle, .print-only svg path, .print-only svg rect, .print-only svg line {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+  }
+
   header.topbar {
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 22px; border-bottom: 1px solid var(--hairline);
@@ -66,15 +99,12 @@
 
   .databricks-badge {
     display: flex; align-items: center; gap: 6px;
-    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
-    color: #fff; background: #1b3139; padding: 5px 10px; border-radius: 3px;
-    letter-spacing: 0.02em;
+    font-family: var(--body); font-size: 12px; font-weight: 600;
+    color: #fff; background: #1b3139; padding: 8px 16px; border-radius: 999px;
+    letter-spacing: 0.01em;
   }
-  .databricks-badge .mark {
-    width: 8px; height: 8px; border-radius: 2px; background: #ff3621; flex-shrink: 0;
-  }
-  .sync-note {
-    font-family: var(--mono); font-size: 10px; color: var(--muted);
+  .databricks-badge::before {
+    content: ''; width: 7px; height: 7px; border-radius: 2px; background: #ff3621; flex-shrink: 0;
   }
 
   .source-tag {
@@ -105,16 +135,25 @@
 
   /* prompt library */
   .prompt-library {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    padding: 10px 12px; border-bottom: 1px solid var(--hairline);
-    flex-shrink: 0; background: var(--panel-2);
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px 14px; border-bottom: 1px solid var(--hairline);
+    flex-shrink: 0; background: #fff; max-height: 190px; overflow-y: auto;
   }
   .prompt-chip {
-    font-family: var(--body); font-size: 11.5px; line-height: 1.3;
-    background: #fff; border: 1px solid var(--hairline); color: var(--text);
-    padding: 6px 10px; border-radius: 14px; cursor: pointer; text-align: left;
+    font-family: var(--body); font-size: 12.5px; line-height: 1.45;
+    background: rgba(14,138,144,0.06); border: 1px solid rgba(14,138,144,0.22); color: var(--text);
+    padding: 11px 14px; border-radius: 10px; cursor: pointer; text-align: left;
   }
-  .prompt-chip:hover { border-color: var(--cyan); color: var(--cyan); }
+  .prompt-chip:hover { border-color: var(--cyan); background: rgba(14,138,144,0.12); }
+
+  .new-chat-btn {
+    font-family: var(--body); font-size: 12px; font-weight: 600; color: var(--cyan);
+    background: #fff; border: 1.5px solid var(--cyan); border-radius: 999px;
+    padding: 6px 14px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .new-chat-btn span { font-size: 15px; line-height: 1; }
+  .new-chat-btn:hover { background: var(--cyan); color: #fff; }
 
   .chat-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
   .msg { max-width: 92%; font-size: 13.5px; line-height: 1.5; padding: 9px 12px; border-radius: 6px; white-space: pre-wrap; }
@@ -137,22 +176,34 @@
   .chat-input button:disabled { opacity: 0.4; cursor: default; }
   .chat-input button:hover:not(:disabled) { filter: brightness(1.1); }
 
-  .map-toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 62%; }
-  .map-toolbar button {
-    background: transparent; color: var(--muted); border: 1px solid var(--hairline);
-    font-family: var(--mono); font-size: 10.5px; padding: 5px 9px; border-radius: 3px; cursor: pointer; white-space: nowrap;
-  }
-  .map-toolbar button:hover { border-color: var(--cyan); color: var(--cyan); }
-  .map-toolbar button.active { background: var(--cyan); color: #fff; border-color: var(--cyan); }
+  .map-container { position: relative; flex: 1; min-height: 0; }
+  #map { position: absolute; inset: 0; }
 
-  #map { flex: 1; min-height: 0; }
+  .map-floating-toolbar {
+    position: absolute; top: 14px; left: 14px; right: 14px; z-index: 600;
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .pill-btn {
+    background: #fff; color: var(--text); border: 1px solid var(--hairline);
+    font-family: var(--body); font-size: 12.5px; font-weight: 500;
+    padding: 8px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(20,40,70,0.13);
+  }
+  .pill-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .pill-btn.active { background: var(--cyan); color: #fff; border-color: var(--cyan); }
+  .pill-select {
+    background: #fff; color: var(--text); border: 1px solid var(--hairline);
+    font-family: var(--body); font-size: 12.5px; font-weight: 500;
+    padding: 8px 12px; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 2px 10px rgba(20,40,70,0.13);
+  }
 
   .map-hint {
     position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    font-family: var(--body); font-size: 11.5px; color: var(--muted);
     background: rgba(255,255,255,0.95); border: 1px solid var(--hairline);
-    padding: 6px 12px; border-radius: 3px; z-index: 500; pointer-events: none;
-    box-shadow: 0 2px 8px rgba(20,40,70,0.08); max-width: 90%; text-align: center;
+    padding: 7px 14px; border-radius: 999px; z-index: 500; pointer-events: none;
+    box-shadow: 0 2px 10px rgba(20,40,70,0.13); max-width: 90%; text-align: center;
   }
 
   .stop-marker {
@@ -190,7 +241,10 @@
   .flag-item { font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: flex; justify-content: space-between; border-bottom: 1px dashed var(--hairline); padding-bottom: 4px; }
   .flag-item .tag { color: var(--coral); }
   .flag-item .tag.ok { color: var(--cyan); }
-  .empty-note { font-family: var(--mono); font-size: 11.5px; color: var(--muted); text-align: center; padding: 20px 10px; }
+  .empty-note {
+    font-family: var(--body); font-size: 13px; color: var(--muted); text-align: center;
+    padding: 48px 24px; line-height: 1.6; max-width: 260px; margin: 0 auto;
+  }
 
   .inspector-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
   .inspector-title { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.3; }
@@ -242,11 +296,32 @@
     .columns { grid-template-columns: 1fr; grid-auto-rows: min-content; overflow-y: auto; }
     .panel { border-right: none; border-bottom: 1px solid var(--hairline); }
     .chat-body { max-height: 260px; }
-    #map { height: 340px; }
+    .map-container { height: 380px; flex: none; }
     .analytics-body { max-height: none; }
-    .map-toolbar { max-width: 100%; }
     header.topbar { flex-wrap: wrap; gap: 8px; }
-    .sync-note { display: none; }
+    .map-floating-toolbar {
+      flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      right: auto; max-width: calc(100% - 28px); padding-bottom: 4px;
+    }
+    .pill-btn, .pill-select { flex-shrink: 0; }
+    .prompt-library { max-height: 160px; }
+  }
+
+  @media (max-width: 520px) {
+    .app { height: auto; min-height: 100vh; }
+    header.topbar { padding: 10px 14px; }
+    .brand h1 { font-size: 16px; }
+    .brand .eyebrow { font-size: 10px; }
+    .databricks-badge { font-size: 11px; padding: 6px 12px; }
+    .panel-head { padding: 10px 12px; }
+    .chat-body, .analytics-body { padding: 12px; }
+    .chat-input { padding: 8px; }
+    .chat-input textarea { font-size: 16px; } /* prevents iOS zoom-on-focus */
+    .metric-grid { grid-template-columns: 1fr; }
+    .map-container { height: 320px; }
+    .map-hint { font-size: 10.5px; padding: 6px 10px; bottom: 8px; }
+    .prompt-chip { font-size: 12px; padding: 10px 12px; }
+    .new-chat-btn, .brief-btn { font-size: 11.5px; }
   }
 
   a:focus, button:focus, textarea:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
@@ -260,10 +335,8 @@
       <span class="eyebrow">CalSTA Data Hub &middot; Transit Analytics Workspace</span>
       <h1>Transit Gap Insight Tool</h1>
     </div>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <div class="databricks-badge"><span class="mark"></span>Powered by Databricks</div>
-      <span class="sync-note">Synced from Databricks Lakehouse &middot; moments ago</span>
-      <div class="status-chip"><span class="dot"></span><span id="stopCountChip">14 stops &middot; 20 regions loaded</span></div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div class="databricks-badge">Powered by Databricks</div>
     </div>
   </header>
 
@@ -271,52 +344,58 @@
 
     <section class="panel" id="chatPanel">
       <div class="panel-head">
-        <div class="label">Assistant</div>
-        <h2>Planning Chat</h2>
+        <h2>AI Assistant</h2>
         <div class="source-tag"><span class="mark"></span>calsta_transit.gold.chat_context_view</div>
+        <div style="text-align:center; margin-top:10px;">
+          <button class="new-chat-btn" id="newChatBtn"><span>+</span> New chat</button>
+        </div>
       </div>
       <div class="prompt-library" id="promptLibrary">
-        <button class="prompt-chip" data-prompt="Show me all light rail routes">Show me all light rail routes</button>
-        <button class="prompt-chip" data-prompt="Show me Bus Rapid Transit corridors">Show Bus Rapid Transit corridors</button>
-        <button class="prompt-chip" data-prompt="Assess transit stop density in my county">Assess transit stop density in my county</button>
-        <button class="prompt-chip" data-prompt="Show me where transit is most consistently delayed in a heat map">Show delayed transit as a heat map</button>
-        <button class="prompt-chip" data-prompt="What areas of San Diego County have the highest equity screening scores and the least density of transit?">Highest equity need + lowest transit density in San Diego County</button>
+        <button class="prompt-chip" data-prompt="Show me all light rail routes in this area.">Show me all light rail routes in this area.</button>
+        <button class="prompt-chip" data-prompt="Show me the Bus Rapid Transit corridors in this area.">Show me the Bus Rapid Transit corridors in this area.</button>
+        <button class="prompt-chip" data-prompt="What is the transit stop density in my county?">What is the transit stop density in my county?</button>
+        <button class="prompt-chip" data-prompt="Where is transit most consistently delayed? Show me a heat map.">Where is transit most consistently delayed? Show me a heat map.</button>
+        <button class="prompt-chip" data-prompt="What areas of San Diego County have the highest equity screening scores and the least density of transit?">What areas of San Diego County have the highest equity screening scores and the least density of transit?</button>
       </div>
       <div class="chat-body" id="chatBody">
         <div class="msg system-note">Ask about a stop or region you clicked, or try a prompt above.</div>
       </div>
       <div class="chat-input">
-        <textarea id="chatInput" placeholder="Ask the planning assistant..."></textarea>
+        <textarea id="chatInput" placeholder="Ask AI Assistant..."></textarea>
         <button id="sendBtn">Send</button>
       </div>
     </section>
 
     <section class="panel" id="mapPanel">
-      <div class="panel-head" style="display:flex; align-items:center; justify-content:space-between;">
-        <div>
-          <div class="label">Route Canvas</div>
-          <h2>Statewide Stop &amp; Region Map</h2>
-          <div class="source-tag"><span class="mark"></span>calsta_transit.silver.stop_geometry &middot; route_geometry</div>
-        </div>
-        <div class="map-toolbar">
-          <button id="addModeBtn">+ Add stop</button>
-          <button id="railBtn">Light rail</button>
-          <button id="brtBtn">BRT lanes</button>
-          <button id="heatBtn">Delay heat</button>
-          <button id="regionBtn">County Regions</button>
-          <button id="undoBtn">Undo</button>
-          <button id="clearBtn">Clear</button>
-        </div>
+      <div class="panel-head">
+        <div class="source-tag"><span class="mark"></span>calsta_transit.silver.stop_geometry &middot; route_geometry</div>
       </div>
-      <div id="map"></div>
-      <div class="map-hint" id="mapHint">Click any marker to view its details</div>
+      <div class="map-container">
+        <div id="map"></div>
+        <div class="map-floating-toolbar">
+          <select id="countySelect" class="pill-select">
+            <option value="San Diego">San Diego County (pilot)</option>
+            <option value="Los Angeles">Los Angeles County</option>
+            <option value="Sacramento">Sacramento County</option>
+            <option value="All">All Counties (Statewide)</option>
+          </select>
+          <button id="addModeBtn" class="pill-btn">+ Add stop</button>
+          <button id="railBtn" class="pill-btn">Light rail</button>
+          <button id="brtBtn" class="pill-btn">BRT lanes</button>
+          <button id="heatBtn" class="pill-btn">Delay heat</button>
+          <button id="regionBtn" class="pill-btn">County Regions</button>
+          <button id="undoBtn" class="pill-btn">Undo</button>
+          <button id="clearBtn" class="pill-btn">Clear</button>
+        </div>
+        <div class="map-hint" id="mapHint">Click any marker to view its details</div>
+      </div>
     </section>
 
     <section class="panel" id="analyticsPanel">
       <div class="panel-head">
-        <div class="label">Live Metrics</div>
-        <h2>Instant Insight</h2>
+        <h2>Analytics</h2>
         <div class="source-tag"><span class="mark"></span>calsta_transit.gold.stop_metrics &middot; region_equity_density</div>
+        <button class="brief-btn" id="briefBtn">Download Priority Brief</button>
       </div>
       <div class="analytics-body" id="analyticsBody">
         <div class="empty-note">Click a stop or region on the map to view details.</div>
@@ -324,7 +403,13 @@
     </section>
 
   </div>
+
+  <div class="app-footer">
+    Data note: equity, density, delay, and Cal-ITP figures shown are illustrative placeholders for this prototype. A production deployment would connect to sources such as CalEnviroScreen, GTFS/Cal-ITP feeds, the National Transit Database, and Caltrans district records. Hosted on the CalSTA Data Hub.
+  </div>
 </div>
+
+<div class="print-only" id="printBrief"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -432,7 +517,25 @@
     { name: 'Oceanside', county: 'San Diego', lat: 33.1959, lng: -117.3795, population: 175000, equityScore: 61, density: 2.0, delayIndex: 33 },
     { name: 'Ramona', county: 'San Diego', lat: 33.0417, lng: -116.8675, population: 20000, equityScore: 58, density: 0.3, delayIndex: 12 },
     { name: 'Julian', county: 'San Diego', lat: 33.0786, lng: -116.6019, population: 1500, equityScore: 62, density: 0.1, delayIndex: 8 },
-    { name: 'Borrego Springs', county: 'San Diego', lat: 33.2561, lng: -116.3753, population: 3400, equityScore: 72, density: 0.05, delayIndex: 6 }
+    { name: 'Borrego Springs', county: 'San Diego', lat: 33.2561, lng: -116.3753, population: 3400, equityScore: 72, density: 0.05, delayIndex: 6 },
+
+    // Los Angeles County (statewide proof point)
+    { name: 'Downtown Los Angeles', county: 'Los Angeles', lat: 34.0407, lng: -118.2468, population: 68000, equityScore: 72, density: 5.8, delayIndex: 74 },
+    { name: 'South Los Angeles', county: 'Los Angeles', lat: 33.9736, lng: -118.2703, population: 180000, equityScore: 89, density: 3.4, delayIndex: 60 },
+    { name: 'Boyle Heights', county: 'Los Angeles', lat: 34.0328, lng: -118.2107, population: 92000, equityScore: 86, density: 3.9, delayIndex: 55 },
+    { name: 'East Los Angeles', county: 'Los Angeles', lat: 34.0239, lng: -118.1720, population: 120000, equityScore: 83, density: 2.9, delayIndex: 48 },
+    { name: 'Compton', county: 'Los Angeles', lat: 33.8958, lng: -118.2201, population: 96000, equityScore: 85, density: 2.4, delayIndex: 45 },
+    { name: 'Long Beach', county: 'Los Angeles', lat: 33.7701, lng: -118.1937, population: 466000, equityScore: 66, density: 2.7, delayIndex: 40 },
+    { name: 'Santa Monica', county: 'Los Angeles', lat: 34.0195, lng: -118.4912, population: 93000, equityScore: 20, density: 2.2, delayIndex: 30 },
+    { name: 'Antelope Valley (Palmdale/Lancaster)', county: 'Los Angeles', lat: 34.6868, lng: -118.1542, population: 220000, equityScore: 76, density: 0.3, delayIndex: 20 },
+
+    // Sacramento County (statewide proof point)
+    { name: 'Downtown Sacramento', county: 'Sacramento', lat: 38.5816, lng: -121.4944, population: 45000, equityScore: 62, density: 4.1, delayIndex: 50 },
+    { name: 'Oak Park', county: 'Sacramento', lat: 38.5555, lng: -121.4644, population: 22000, equityScore: 84, density: 2.6, delayIndex: 42 },
+    { name: 'South Sacramento', county: 'Sacramento', lat: 38.4874, lng: -121.4432, population: 150000, equityScore: 80, density: 1.9, delayIndex: 38 },
+    { name: 'Elk Grove', county: 'Sacramento', lat: 38.4088, lng: -121.3716, population: 178000, equityScore: 40, density: 1.1, delayIndex: 24 },
+    { name: 'Rancho Cordova', county: 'Sacramento', lat: 38.5891, lng: -121.3027, population: 79000, equityScore: 55, density: 1.4, delayIndex: 28 },
+    { name: 'Galt', county: 'Sacramento', lat: 38.2544, lng: -121.3005, population: 25000, equityScore: 61, density: 0.2, delayIndex: 14 }
   ];
 
   // Precompute a "transit gap" ranking: high equity need + low transit density.
@@ -444,18 +547,22 @@
     r.priorityTier = r.gapScore >= 55 ? 1 : r.gapScore >= 35 ? 2 : 3;
   });
   const GAP_RANKING = [...REGIONS].sort((a, b) => b.gapScore - a.gapScore);
+  function currentGapRanking() {
+    return countyFilter === 'All' ? GAP_RANKING : GAP_RANKING.filter(r => r.county === countyFilter);
+  }
 
   // Fold stop-level data into the same named geography as the county regions:
   // each stop is tagged with its nearest region so a click surfaces both
   // granularities together.
-  DUMMY_STOPS.forEach((stop) => {
+  function nearestRegion(lat, lng) {
     let nearest = null, nearestDist = Infinity;
     REGIONS.forEach((region) => {
-      const dist = haversineKm(stop.lat, stop.lng, region.lat, region.lng);
+      const dist = haversineKm(lat, lng, region.lat, region.lng);
       if (dist < nearestDist) { nearestDist = dist; nearest = region; }
     });
-    stop.region = nearest;
-  });
+    return nearest;
+  }
+  DUMMY_STOPS.forEach((stop) => { stop.region = nearestRegion(stop.lat, stop.lng); });
 
   // ---------------- BUS RAPID TRANSIT / BUS-ONLY LANE CORRIDORS ----------------
   const BRT_CORRIDORS = [
@@ -491,13 +598,14 @@
     return L.divIcon({ className: '', html: `<div class="stop-marker" style="background:${style.color};">${style.code}</div>`, iconSize: [24,24], iconAnchor: [12,12] });
   }
 
+  const stopsLayerGroup = L.layerGroup().addTo(map);
   DUMMY_STOPS.forEach((stop) => {
-    const marker = L.marker([stop.lat, stop.lng], { icon: makeDummyIcon(stop.type) }).addTo(map);
+    const marker = L.marker([stop.lat, stop.lng], { icon: makeDummyIcon(stop.type) }).addTo(stopsLayerGroup);
     marker.on('click', (e) => { L.DomEvent.stopPropagation(e); selectItem('stop', stop); });
     stop._marker = marker;
   });
 
-  // ---- Region layer (San Diego County) ----
+  // ---- Region layer (statewide -- filterable by county) ----
   function equityColor(score) {
     if (score >= 75) return '#c1442e';
     if (score >= 50) return '#c8801a';
@@ -510,8 +618,34 @@
       radius, color: '#fff', weight: 2, fillColor: equityColor(region.equityScore), fillOpacity: 0.85
     });
     marker.on('click', (e) => { L.DomEvent.stopPropagation(e); selectItem('region', region); });
-    marker.addTo(regionLayerGroup);
     region._marker = marker;
+  });
+
+  let countyFilter = 'San Diego';
+  function visibleRegions() {
+    return countyFilter === 'All' ? REGIONS : REGIONS.filter(r => r.county === countyFilter);
+  }
+  function refreshRegionLayer() {
+    regionLayerGroup.clearLayers();
+    visibleRegions().forEach(r => r._marker.addTo(regionLayerGroup));
+  }
+  refreshRegionLayer();
+
+  function applyCountyFilter(county, flyTo) {
+    countyFilter = county;
+    refreshRegionLayer();
+    const showStops = (county === 'San Diego' || county === 'All');
+    if (showStops) { if (!map.hasLayer(stopsLayerGroup)) stopsLayerGroup.addTo(map); }
+    else { if (map.hasLayer(stopsLayerGroup)) map.removeLayer(stopsLayerGroup); }
+    if (flyTo) {
+      const coords = visibleRegions().map(r => [r.lat, r.lng]);
+      if (coords.length) fitToCoords(coords);
+    }
+    updateAnalyticsPanel();
+  }
+
+  document.getElementById('countySelect').addEventListener('change', (e) => {
+    applyCountyFilter(e.target.value, true);
   });
 
   // ---- Light rail / rail route layer ----
@@ -631,7 +765,7 @@
   }
   function setRegionLayer(on, fly) {
     regionBtn.classList.toggle('active', on);
-    if (on) { regionLayerGroup.addTo(map); if (fly) fitToCoords(REGIONS.map(r=>[r.lat,r.lng])); }
+    if (on) { regionLayerGroup.addTo(map); if (fly) fitToCoords(visibleRegions().map(r=>[r.lat,r.lng])); }
     else map.removeLayer(regionLayerGroup);
   }
   function fitToCoords(coords) {
@@ -766,7 +900,8 @@
   }
 
   function renderPriorityListCard() {
-    const top5 = GAP_RANKING.slice(0, 5);
+    const top5 = currentGapRanking().slice(0, 5);
+    const scopeLabel = countyFilter === 'All' ? 'Statewide' : `${countyFilter} County`;
     const rows = top5.map((r, i) => `
       <div class="flag-item">
         <span>${i+1}. ${r.name}${r.isRural ? ' &middot; rural' : ''}</span>
@@ -774,9 +909,9 @@
       </div>
     `).join('');
     return `
-      <div class="section-title">State Transit Priority List</div>
+      <div class="section-title">State Transit Priority List &mdash; ${scopeLabel}</div>
       <div class="metric-card">
-        <div class="metric-label">Top 5 Statewide Priority Regions</div>
+        <div class="metric-label">Top 5 Priority Regions</div>
         <div class="flag-list">${rows}</div>
       </div>
     `;
@@ -838,7 +973,8 @@
     if (t.includes('heat map') || t.includes('delay')) { setHeatLayer(true); notes.push('Colored the transit routes by delay (purple = low, red = high).'); }
     if (t.includes('density') || t.includes('equity') || t.includes('gap') || t.includes('county')) {
       setRegionLayer(true, true);
-      notes.push('Switched the map to San Diego County regional data.');
+      const scopeLabel = countyFilter === 'All' ? 'statewide' : `${countyFilter} County`;
+      notes.push(`Showing ${scopeLabel} regional data on the map.`);
     }
     if (notes.length) appendMessage('system-note', notes.join(' '));
   }
@@ -859,13 +995,35 @@
   function generateAssistantReply(text) {
     const t = text.toLowerCase();
 
-    // Equity + density gap question (San Diego County) -- framed as the EO's
-    // "state priority list" of transit projects
-    if ((t.includes('equity') || t.includes('screening') || t.includes('gap') || t.includes('priority')) && (t.includes('density') || t.includes('transit') || t.includes('san diego') || t.includes('county'))) {
-      const top5 = GAP_RANKING.slice(0, 5)
+    // Impact of the user's proposed (map-plotted) stops
+    if ((t.includes('impact') || t.includes('these stops') || t.includes('these new') || t.includes('proposed stops') || t.includes('new stops')) && t.includes('transit')) {
+      if (proposedStops.length === 0) {
+        return `You haven't plotted any proposed stops yet. Toggle "+ Add stop" on the map, place a few points, then ask this again and I'll estimate their impact.${selectedContextNote()}`;
+      }
+      const { n, totalKm, avgSpacingM, flags } = computeRouteMetrics();
+      const warnCount = flags.filter(f => f.tag === 'warn').length;
+      const nearbyRegions = proposedStops.map(s => nearestRegion(s.lat, s.lng));
+      const avgEquity = Math.round(nearbyRegions.reduce((sum, r) => sum + r.equityScore, 0) / nearbyRegions.length);
+      const avgDensity = (nearbyRegions.reduce((sum, r) => sum + r.density, 0) / nearbyRegions.length);
+      const uniqueRegionNames = [...new Set(nearbyRegions.map(r => r.name))];
+      const estimatedPerStop = nearbyRegions.map(r => Math.max(40, Math.round(80 + r.equityScore * 2.4 - r.density * 18)));
+      const totalEstimated = estimatedPerStop.reduce((a, b) => a + b, 0);
+      const ruralCount = nearbyRegions.filter(r => r.isRural).length;
+      return `Estimated impact of your ${n} proposed stop${n === 1 ? '' : 's'}:\n\n` +
+        `- Corridor length: ${fmt(totalKm, 2)}km, average spacing ${fmt(avgSpacingM, 0)}m${warnCount ? ` (${warnCount} segment${warnCount === 1 ? '' : 's'} outside the typical 150\u2013900m range)` : ' (within typical urban spacing)'}.\n` +
+        `- These stops fall in or near ${uniqueRegionNames.join(', ')}, averaging an equity screening score of ${avgEquity}/100 and current transit density of ${fmt(avgDensity, 2)}/sq mi${ruralCount ? ` (${ruralCount} rural service gap area${ruralCount === 1 ? '' : 's'})` : ''} -- below several better-served parts of the county.\n` +
+        `- Estimated combined daily boardings if implemented: roughly ${fmtNum(totalEstimated)}, based on ridership at comparably-scored stops already in the dataset.\n` +
+        `- Net effect: measurably higher transit density in ${uniqueRegionNames.length > 1 ? 'these communities' : uniqueRegionNames[0]}, directly addressing the EO's call to close transit gaps in underserved neighborhoods.\n\n` +
+        `This is an illustrative projection from the prototype's dummy data, not a ridership model.${selectedContextNote()}`;
+    }
+
+    // Equity + density gap question -- framed as the EO's "state priority list"
+    if ((t.includes('equity') || t.includes('screening') || t.includes('gap') || t.includes('priority')) && (t.includes('density') || t.includes('transit') || t.includes('county'))) {
+      const scopeLabel = countyFilter === 'All' ? 'Statewide' : `${countyFilter} County`;
+      const top5 = currentGapRanking().slice(0, 5)
         .map((r, i) => `${i + 1}. ${r.name} -- equity ${r.equityScore}/100, density ${r.density}/sq mi, Tier ${r.priorityTier}${r.isRural ? ', rural service gap' : ''}`)
         .join('\n');
-      return `State Transit Priority List -- San Diego County areas with the highest equity screening scores and the lowest transit stop density:\n\n${top5}\n\nThe backcountry and rural desert communities (Borrego Springs, Julian, Ramona) and the San Ysidro border community show the sharpest mismatch between need and service, consistent with the EO's directive to close transit gaps in rural counties and underserved neighborhoods. Map switched to the San Diego County region view.${selectedContextNote()}`;
+      return `State Transit Priority List -- ${scopeLabel} areas with the highest equity screening scores and the lowest transit stop density:\n\n${top5}\n\nThis reflects the EO's directive to close transit gaps in rural counties and underserved neighborhoods. Use the county selector on the map to switch scope, or choose "All Counties" for the full statewide list.${selectedContextNote()}`;
     }
 
     // Light rail routes
@@ -890,12 +1048,14 @@
       return `Highest delay index across the loaded dataset:\n\n${list}\n\nThe transit routes are now color-coded by delay -- purple segments run smoothly, red segments see the most consistent delay.${selectedContextNote()}`;
     }
 
-    // Density in "my county" (generic, assume San Diego)
+    // Density in "my county" (generic, respects the county selector)
     if (t.includes('density')) {
-      const sorted = [...REGIONS].sort((a, b) => a.density - b.density);
+      const scopeRegions = countyFilter === 'All' ? REGIONS : REGIONS.filter(r => r.county === countyFilter);
+      const scopeLabel = countyFilter === 'All' ? 'statewide' : `${countyFilter} County`;
+      const sorted = [...scopeRegions].sort((a, b) => a.density - b.density);
       const lowest = sorted.slice(0, 5).map((r, i) => `${i + 1}. ${r.name} -- ${r.density}/sq mi`).join('\n');
       const highest = sorted.slice(-3).reverse().map((r, i) => `${i + 1}. ${r.name} -- ${r.density}/sq mi`).join('\n');
-      return `Assuming "my county" means San Diego County, since that's where detailed regional density data is loaded:\n\nLowest stop density:\n${lowest}\n\nHighest stop density:\n${highest}\n\nThe rural backcountry and desert communities (Borrego Springs, Julian, Ramona) are consistently the least dense, while the urban core and South Bay corridor carry the highest density.${selectedContextNote()}`;
+      return `Assuming "my county" means ${scopeLabel}, based on the county selector above the map:\n\nLowest stop density:\n${lowest}\n\nHighest stop density:\n${highest}\n\nSwitch the county selector to see a different area.${selectedContextNote()}`;
     }
 
     // Direct question about the selected stop/region
@@ -910,7 +1070,7 @@
     }
 
     // Fallback
-    return `I can answer questions using the data loaded in this workspace: 14 stops around Coronado/San Diego (inventory, usage, ownership, Cal-ITP compliance), 20 San Diego County regions (equity score, transit density, delay index, State Transit Priority List tier), light rail routes, and Bus Rapid Transit corridors.\n\nTry one of the prompts above, or ask about a specific stop or region you've clicked on the map.${selectedContextNote()}`;
+    return `I can answer questions using the data loaded in this workspace: 14 stops around Coronado/San Diego (inventory, usage, ownership, Cal-ITP compliance) and 35 regions across San Diego, Los Angeles, and Sacramento Counties (equity score, transit density, delay index, State Transit Priority List tier). Use the county selector above the map to change scope.\n\nTry one of the prompts above, or ask about a specific stop or region you've clicked on the map.${selectedContextNote()}`;
   }
 
   function sendMessage() {
@@ -942,6 +1102,104 @@
   });
 
   // ---------------- INIT ----------------
+  document.getElementById('newChatBtn').addEventListener('click', () => {
+    chatBody.innerHTML = '<div class="msg system-note">Ask about a stop or region you clicked, or try a prompt above.</div>';
+    chatInput.value = '';
+  });
+
+  function buildBriefMapSVG(scopeRegions, topRegions) {
+    const width = 560, height = 320, pad = 26;
+    const lats = scopeRegions.map(r => r.lat), lngs = scopeRegions.map(r => r.lng);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const latSpan = (maxLat - minLat) || 1, lngSpan = (maxLng - minLng) || 1;
+    function project(lat, lng) {
+      const x = pad + ((lng - minLng) / lngSpan) * (width - 2 * pad);
+      const y = pad + ((maxLat - lat) / latSpan) * (height - 2 * pad);
+      return [x, y];
+    }
+    const tierColor = (t) => t === 1 ? '#c1442e' : t === 2 ? '#c8801a' : '#0e8a90';
+    const topNames = topRegions.map(r => r.name);
+
+    const circles = scopeRegions.map(r => {
+      const [x, y] = project(r.lat, r.lng);
+      const isTop = topNames.includes(r.name);
+      const radius = isTop ? 7 : 4;
+      const label = isTop ? `<text x="${(x + 9).toFixed(1)}" y="${(y + 3).toFixed(1)}" font-size="9" font-family="sans-serif" fill="#16202e">${r.name}</text>` : '';
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius}" fill="${tierColor(r.priorityTier)}" fill-opacity="${isTop ? 0.95 : 0.5}" stroke="#fff" stroke-width="1"/>${label}`;
+    }).join('');
+
+    const corridorPts = topRegions.slice(0, 5).map(r => project(r.lat, r.lng));
+    let corridorPath = '';
+    if (corridorPts.length > 1) {
+      const d = corridorPts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+      corridorPath = `<path d="${d}" fill="none" stroke="#5b57c9" stroke-width="2" stroke-dasharray="5,4"/>`;
+    }
+
+    const suggested = topRegions.slice(0, 3).map((r, i) => {
+      const [x, y] = project(r.lat, r.lng);
+      const ox = x + (i % 2 === 0 ? 16 : -16), oy = y - 16;
+      return `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${ox.toFixed(1)}" y2="${oy.toFixed(1)}" stroke="#1b3139" stroke-width="1" stroke-dasharray="2,2"/>` +
+        `<rect x="${(ox - 4).toFixed(1)}" y="${(oy - 4).toFixed(1)}" width="8" height="8" fill="#1b3139" stroke="#fff" stroke-width="1"/>`;
+    }).join('');
+
+    return `
+      <svg width="560" height="320" viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; max-width:560px;">
+        <rect x="1" y="1" width="${width-2}" height="${height-2}" fill="#fafbfc" stroke="#cccccc" stroke-width="1.5"/>
+        ${corridorPath}${circles}${suggested}
+      </svg>
+      <div style="display:flex; flex-wrap:wrap; gap:14px; font-size:10px; color:#555; margin:6px 0 16px 0; font-family:monospace;">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#c1442e;margin-right:4px;"></span>Tier 1 priority</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#c8801a;margin-right:4px;"></span>Tier 2 priority</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0e8a90;margin-right:4px;"></span>Tier 3 priority</span>
+        <span><span style="display:inline-block;width:8px;height:8px;background:#1b3139;margin-right:4px;"></span>Suggested new stop</span>
+        <span><span style="display:inline-block;width:14px;height:2px;background:#5b57c9;margin-right:4px;"></span>Proposed priority corridor</span>
+      </div>
+    `;
+  }
+
+  function buildEoNarrative(scopeLabel, top5, top3) {
+    const topNames = top3.map(r => r.name).join(', ');
+    const ruralAreas = top5.filter(r => r.isRural);
+    const tier1Count = top5.filter(r => r.priorityTier === 1).length;
+    const ruralClause = ruralAreas.length
+      ? ` Notably, ${ruralAreas.map(r => r.name).join(' and ')} ${ruralAreas.length === 1 ? 'is a' : 'are'} rural service gap area${ruralAreas.length === 1 ? '' : 's'} explicitly matching the EO's directive to close transit gaps "in rural counties or underserved neighborhoods."`
+      : '';
+    return `This proposed corridor connects ${topNames}, ${scopeLabel === 'Statewide' ? 'communities' : `communities in ${scopeLabel}`} carrying some of the highest combined equity need and lowest transit density in the dataset.${ruralClause} Advancing new stops here would move ${tier1Count} Tier 1 priority area${tier1Count === 1 ? '' : 's'} measurably closer to reliable transit access, directly answering the executive order's call to accelerate local and regional transit delivery and close service gaps statewide. Consolidating this corridor into a ranked, tiered list mirrors the EO's own directive to build a consolidated state priority list with clear deadlines, and every stop tracked here already carries Cal-ITP data and payment compliance status, supporting the EO's parallel push to modernize transit data and payment standards. In short: this is a concrete, data-backed candidate for the kind of project CalSTA's priority list is designed to surface first.`;
+  }
+
+  document.getElementById('briefBtn').addEventListener('click', () => {
+    const scopeLabel = countyFilter === 'All' ? 'Statewide' : `${countyFilter} County`;
+    const scopeRegions = countyFilter === 'All' ? REGIONS : REGIONS.filter(r => r.county === countyFilter);
+    const top5 = currentGapRanking().slice(0, 5);
+    const top3 = top5.slice(0, 3);
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const mapSvg = buildBriefMapSVG(scopeRegions, top5);
+    const rows = top5.map((r, i) => `
+      <tr><td>${i+1}</td><td>${r.name}</td><td>${r.equityScore}/100</td><td>${r.density}/sq mi</td><td>Tier ${r.priorityTier}</td><td>${r.isRural ? 'Yes' : ''}</td></tr>
+    `).join('');
+    const suggestionLines = top3.map((r, i) => `<div class="eo-line">${i+1}. <strong>${r.name}</strong> &mdash; suggest a new stop near this centroid; ${r.isRural ? 'a rural service gap area with' : 'an underserved area with'} equity score ${r.equityScore}/100 and density ${r.density}/sq mi.</div>`).join('');
+    document.getElementById('printBrief').innerHTML = `
+      <h1>State Transit Priority Brief</h1>
+      <div class="p-sub">CalSTA Data Hub &middot; Transit Gap Insight Tool &middot; ${scopeLabel} &middot; Generated ${dateStr}</div>
+      <h2>Priority Areas &amp; Suggested New Service</h2>
+      ${mapSvg}
+      <h2>Suggested New Stops (Top 3 Priority Areas)</h2>
+      ${suggestionLines}
+      <h2>Proposed Priority Corridor</h2>
+      <div class="eo-line">An illustrative corridor connecting the top 5 ranked priority areas in sequence, shown as the dashed line above &mdash; intended to prompt discussion of a new route linking underserved communities, not an engineered alignment.</div>
+      <h2>Top 5 Priority Regions (Detail)</h2>
+      <table>
+        <tr><th>Rank</th><th>Region</th><th>Equity Score</th><th>Transit Density</th><th>Priority Tier</th><th>Rural Gap</th></tr>
+        ${rows}
+      </table>
+      <h2>How This Corridor Meets the Executive Order's Goals</h2>
+      <div class="eo-line">${buildEoNarrative(scopeLabel, top5, top3)}</div>
+      <div class="p-footer">Data note: equity, density, delay, and Cal-ITP figures are illustrative placeholders for this prototype. Suggested stops and the proposed corridor are generated by connecting top-ranked priority areas and are not an engineering-grade site selection or alignment study. Hosted on the CalSTA Data Hub.</div>
+    `;
+    window.print();
+  });
+
   updateAnalyticsPanel();
   setTimeout(() => map.invalidateSize(), 200);
 })();
