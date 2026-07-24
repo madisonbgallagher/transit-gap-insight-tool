@@ -222,6 +222,17 @@
     display: inline-block; font-family: var(--mono); font-size: 10.5px; font-weight: 700;
     padding: 3px 9px; border-radius: 3px; background: rgba(193,68,46,0.12); color: var(--coral); margin-top: 6px;
   }
+  .rural-badge {
+    display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 700;
+    padding: 3px 9px; border-radius: 3px; background: rgba(200,128,26,0.14); color: var(--amber); margin-top: 8px;
+  }
+  .tier-badge {
+    display: inline-block; font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 3px; margin-top: 6px; margin-right: 6px;
+  }
+  .tier-1 { background: rgba(193,68,46,0.14); color: var(--coral); }
+  .tier-2 { background: rgba(200,128,26,0.14); color: var(--amber); }
+  .tier-3 { background: rgba(14,138,144,0.12); color: var(--cyan); }
 
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -266,6 +277,7 @@
       </div>
       <div class="prompt-library" id="promptLibrary">
         <button class="prompt-chip" data-prompt="Show me all light rail routes">Show me all light rail routes</button>
+        <button class="prompt-chip" data-prompt="Show me Bus Rapid Transit corridors">Show Bus Rapid Transit corridors</button>
         <button class="prompt-chip" data-prompt="Assess transit stop density in my county">Assess transit stop density in my county</button>
         <button class="prompt-chip" data-prompt="Show me where transit is most consistently delayed in a heat map">Show delayed transit as a heat map</button>
         <button class="prompt-chip" data-prompt="What areas of San Diego County have the highest equity screening scores and the least density of transit?">Highest equity need + lowest transit density in San Diego County</button>
@@ -289,6 +301,7 @@
         <div class="map-toolbar">
           <button id="addModeBtn">+ Add stop</button>
           <button id="railBtn">Light rail</button>
+          <button id="brtBtn">BRT lanes</button>
           <button id="heatBtn">Delay heat</button>
           <button id="regionBtn">County Regions</button>
           <button id="undoBtn">Undo</button>
@@ -327,72 +340,72 @@
   const DUMMY_STOPS = [
     { name: 'Coronado Ferry Landing', type: 'Ferry Landing', owner: 'Port of San Diego', lat: 32.6858, lng: -117.1830,
       description: 'Passenger ferry terminal linking Coronado to the Broadway Pier in downtown San Diego, with connecting bus service and bike rental on site.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, contactlessPayment: true, bikeRack: true, ada: true, trash: true },
       usage: { avgDailyBoardings: 1450, peakHourBoardings: 210, connectingRoutes: ['Ferry to Broadway Pier', 'MTS Route 904'] },
       condition: { lastInspected: '2026-05-12', rating: 'Good' }, delayIndex: 25 },
     { name: 'Orange Ave & B Ave', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.6890, lng: -117.1793,
       description: 'Curbside stop on Coronado\u2019s main commercial corridor, serving downtown shops and ferry landing walk-up traffic.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: false, bikeRack: false, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: false, contactlessPayment: false, bikeRack: false, ada: true, trash: true },
       usage: { avgDailyBoardings: 310, peakHourBoardings: 48, connectingRoutes: ['MTS Route 901', 'MTS Route 904'] },
       condition: { lastInspected: '2026-03-02', rating: 'Fair' }, delayIndex: 30 },
     { name: 'Hotel del Coronado', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.6828, lng: -117.1734,
       description: 'High-tourism stop directly serving the Hotel del Coronado resort and adjacent beach access points.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, contactlessPayment: true, bikeRack: true, ada: true, trash: true },
       usage: { avgDailyBoardings: 580, peakHourBoardings: 95, connectingRoutes: ['MTS Route 901'] },
       condition: { lastInspected: '2026-06-01', rating: 'Good' }, delayIndex: 20 },
     { name: 'NAS North Island Gate', type: 'Bus Stop', owner: 'MTS / U.S. Navy (shared access)', lat: 32.7010, lng: -117.2130,
       description: 'Stop serving the main gate of Naval Air Station North Island, primarily used by base personnel and contractors.',
-      inventory: { shelter: false, bench: true, lighting: true, realTimeSignage: false, bikeRack: false, ada: true, trash: false },
+      inventory: { shelter: false, bench: true, lighting: true, realTimeSignage: false, contactlessPayment: false, bikeRack: false, ada: true, trash: false },
       usage: { avgDailyBoardings: 420, peakHourBoardings: 180, connectingRoutes: ['MTS Route 904'] },
       condition: { lastInspected: '2025-11-19', rating: 'Fair' }, delayIndex: 40 },
     { name: 'Coronado Bridge Park & Ride', type: 'Park & Ride', owner: 'Caltrans District 11', lat: 32.6975, lng: -117.1465,
       description: 'State-owned park-and-ride lot at the San Diego-side approach to the Coronado Bridge.',
-      inventory: { shelter: true, bench: false, lighting: true, realTimeSignage: false, bikeRack: true, ada: true, trash: true },
+      inventory: { shelter: true, bench: false, lighting: true, realTimeSignage: false, contactlessPayment: false, bikeRack: true, ada: true, trash: true },
       usage: { avgDailyBoardings: 265, peakHourBoardings: 140, connectingRoutes: ['MTS Route 901'] },
       condition: { lastInspected: '2026-01-22', rating: 'Fair' }, delayIndex: 55 },
     { name: 'Barrio Logan Trolley Station', type: 'Trolley Station', owner: 'SANDAG / San Diego Trolley Inc.', lat: 32.6989, lng: -117.1417,
       description: 'Blue Line light rail station serving the Barrio Logan neighborhood, with direct pedestrian access to the Coronado Bridge bike path.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, contactlessPayment: true, bikeRack: true, ada: true, trash: true },
       usage: { avgDailyBoardings: 1890, peakHourBoardings: 310, connectingRoutes: ['Blue Line', 'MTS Route 11'] },
       condition: { lastInspected: '2026-04-08', rating: 'Good' }, delayIndex: 45 },
     { name: 'City College Station', type: 'Trolley Station', owner: 'SANDAG / San Diego Trolley Inc.', lat: 32.7133, lng: -117.1567,
       description: 'Downtown multi-line trolley station adjacent to San Diego City College, one of the busiest boarding points in the core.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, contactlessPayment: true, bikeRack: true, ada: true, trash: true },
       usage: { avgDailyBoardings: 4200, peakHourBoardings: 680, connectingRoutes: ['Blue Line', 'Orange Line', 'Green Line'] },
       condition: { lastInspected: '2026-06-15', rating: 'Good' }, delayIndex: 70 },
     { name: 'Santa Fe Depot', type: 'Multimodal Hub', owner: 'SANDAG / Amtrak / NCTD', lat: 32.7157, lng: -117.1697,
       description: 'Regional multimodal hub combining Amtrak Pacific Surfliner, Coaster commuter rail, and trolley service near the Embarcadero.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, contactlessPayment: true, bikeRack: true, ada: true, trash: true },
       usage: { avgDailyBoardings: 6100, peakHourBoardings: 890, connectingRoutes: ['Amtrak Pacific Surfliner', 'Coaster', 'Blue Line', 'Orange Line'] },
       condition: { lastInspected: '2026-05-28', rating: 'Good' }, delayIndex: 65 },
     { name: 'Gaslamp Quarter Trolley Stop', type: 'Trolley Station', owner: 'SANDAG / San Diego Trolley Inc.', lat: 32.7100, lng: -117.1611,
       description: 'Entertainment-district station with heavy weekend and evening ridership tied to nightlife and Petco Park events.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: false, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, contactlessPayment: true, bikeRack: false, ada: true, trash: true },
       usage: { avgDailyBoardings: 2650, peakHourBoardings: 520, connectingRoutes: ['Orange Line', 'Green Line'] },
       condition: { lastInspected: '2026-02-14', rating: 'Good' }, delayIndex: 75 },
     { name: 'Broadway & Harbor Dr', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.7147, lng: -117.1733,
       description: 'Waterfront stop near the cruise ship terminal and USS Midway Museum, serving visitors and downtown commuters.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: false, bikeRack: false, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: false, contactlessPayment: false, bikeRack: false, ada: true, trash: true },
       usage: { avgDailyBoardings: 740, peakHourBoardings: 130, connectingRoutes: ['MTS Route 923', 'MTS Route 992'] },
       condition: { lastInspected: '2025-12-05', rating: 'Fair' }, delayIndex: 50 },
     { name: 'Coronado Cays', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.6483, lng: -117.1417,
       description: 'Low-frequency residential stop serving the gated Coronado Cays community at the south end of the peninsula.',
-      inventory: { shelter: false, bench: false, lighting: false, realTimeSignage: false, bikeRack: false, ada: false, trash: false },
+      inventory: { shelter: false, bench: false, lighting: false, realTimeSignage: false, contactlessPayment: false, bikeRack: false, ada: false, trash: false },
       usage: { avgDailyBoardings: 35, peakHourBoardings: 8, connectingRoutes: ['MTS Route 904'] },
       condition: { lastInspected: '2025-09-30', rating: 'Poor' }, delayIndex: 15 },
     { name: 'Silver Strand State Beach', type: 'Bus Stop', owner: 'Caltrans District 11 / CA State Parks', lat: 32.6650, lng: -117.1450,
       description: 'Seasonal beach-access stop along Highway 75, with ridership that spikes sharply on summer weekends.',
-      inventory: { shelter: false, bench: true, lighting: false, realTimeSignage: false, bikeRack: false, ada: true, trash: true },
+      inventory: { shelter: false, bench: true, lighting: false, realTimeSignage: false, contactlessPayment: false, bikeRack: false, ada: true, trash: true },
       usage: { avgDailyBoardings: 90, peakHourBoardings: 55, connectingRoutes: ['MTS Route 904'] },
       condition: { lastInspected: '2025-08-17', rating: 'Fair' }, delayIndex: 20 },
     { name: 'Imperial Ave Transit Center', type: 'Multimodal Hub', owner: 'SANDAG / MTS', lat: 32.7009, lng: -117.1288,
       description: 'Southeast San Diego transfer hub linking trolley, bus rapid transit, and local bus routes near Interstate 5.',
-      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, bikeRack: true, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: true, realTimeSignage: true, contactlessPayment: true, bikeRack: true, ada: true, trash: true },
       usage: { avgDailyBoardings: 3100, peakHourBoardings: 540, connectingRoutes: ['Blue Line', 'Orange Line', 'Rapid 215'] },
       condition: { lastInspected: '2026-04-30', rating: 'Good' }, delayIndex: 60 },
     { name: 'Coronado Golf Course', type: 'Bus Stop', owner: 'San Diego Metropolitan Transit System (MTS)', lat: 32.6942, lng: -117.1685,
       description: 'Quiet stop serving the municipal golf course and adjacent Glorietta Bay recreational area.',
-      inventory: { shelter: true, bench: true, lighting: false, realTimeSignage: false, bikeRack: false, ada: true, trash: true },
+      inventory: { shelter: true, bench: true, lighting: false, realTimeSignage: false, contactlessPayment: false, bikeRack: false, ada: true, trash: true },
       usage: { avgDailyBoardings: 120, peakHourBoardings: 22, connectingRoutes: ['MTS Route 901'] },
       condition: { lastInspected: '2026-02-27', rating: 'Fair' }, delayIndex: 18 }
   ];
@@ -427,6 +440,8 @@
   REGIONS.forEach(r => {
     const densityNorm = r.density / maxDensity;
     r.gapScore = Math.round(r.equityScore * (1 - densityNorm));
+    r.isRural = r.density < 0.5; // EO language: "rural counties or underserved neighborhoods"
+    r.priorityTier = r.gapScore >= 55 ? 1 : r.gapScore >= 35 ? 2 : 3;
   });
   const GAP_RANKING = [...REGIONS].sort((a, b) => b.gapScore - a.gapScore);
 
@@ -441,6 +456,16 @@
     });
     stop.region = nearest;
   });
+
+  // ---------------- BUS RAPID TRANSIT / BUS-ONLY LANE CORRIDORS ----------------
+  const BRT_CORRIDORS = [
+    { name: 'Rapid 215 (El Cajon Blvd BRT)', color: '#00897b',
+      coords: [[32.7157,-117.1611],[32.7538,-117.1150],[32.7948,-116.9625]] },
+    { name: 'Rapid 235 (I-15 BRT)', color: '#00897b',
+      coords: [[32.7157,-117.1611],[32.9829,-117.0672],[33.1192,-117.0864]] },
+    { name: 'Rapid 225 (South Bay BRT)', color: '#00897b',
+      coords: [[32.5575,-117.0311],[32.6781,-117.0992],[32.7157,-117.1611]] }
+  ];
 
   // ---------------- LIGHT RAIL / PASSENGER RAIL ROUTES ----------------
   const ROUTES = [
@@ -495,6 +520,14 @@
     L.polyline(route.coords, { color: route.color, weight: 4, opacity: 0.85 })
       .bindTooltip(route.name, { sticky: true })
       .addTo(railLayerGroup);
+  });
+
+  // ---- Bus Rapid Transit / bus-only lane layer ----
+  const brtLayerGroup = L.layerGroup();
+  BRT_CORRIDORS.forEach((route) => {
+    L.polyline(route.coords, { color: route.color, weight: 5, opacity: 0.9, dashArray: '2 10', lineCap: 'round' })
+      .bindTooltip(route.name, { sticky: true })
+      .addTo(brtLayerGroup);
   });
 
   // ---- Delay heat layer: color-codes the transit route lines themselves ----
@@ -570,6 +603,7 @@
   // ---- Toolbar ----
   const addModeBtn = document.getElementById('addModeBtn');
   const railBtn = document.getElementById('railBtn');
+  const brtBtn = document.getElementById('brtBtn');
   const heatBtn = document.getElementById('heatBtn');
   const regionBtn = document.getElementById('regionBtn');
   const mapHint = document.getElementById('mapHint');
@@ -584,6 +618,11 @@
     railBtn.classList.toggle('active', on);
     if (on) { railLayerGroup.addTo(map); fitToCoords(ROUTES.flatMap(r => r.coords)); }
     else map.removeLayer(railLayerGroup);
+  }
+  function setBrtLayer(on) {
+    brtBtn.classList.toggle('active', on);
+    if (on) { brtLayerGroup.addTo(map); fitToCoords(BRT_CORRIDORS.flatMap(r => r.coords)); }
+    else map.removeLayer(brtLayerGroup);
   }
   function setHeatLayer(on) {
     heatBtn.classList.toggle('active', on);
@@ -601,6 +640,7 @@
   }
 
   railBtn.addEventListener('click', () => setRailLayer(!map.hasLayer(railLayerGroup)));
+  brtBtn.addEventListener('click', () => setBrtLayer(!map.hasLayer(brtLayerGroup)));
   heatBtn.addEventListener('click', () => setHeatLayer(!map.hasLayer(heatLayerGroup)));
   regionBtn.addEventListener('click', () => setRegionLayer(!map.hasLayer(regionLayerGroup), true));
 
@@ -642,12 +682,15 @@
     const style = TYPE_STYLES[stop.type] || { color:'#333' };
     const inv = stop.inventory, usage = stop.usage, cond = stop.condition;
     const region = stop.region;
+    const calItpCompliant = inv.realTimeSignage && inv.contactlessPayment;
+    const calItpBadge = `<span class="condition-badge ${calItpCompliant ? 'condition-good' : 'condition-poor'}">${calItpCompliant ? 'Cal-ITP Compliant' : 'Not Cal-ITP Compliant'}</span>`;
     const regionHtml = region ? `
       <div class="metric-card">
         <div class="metric-label">Neighborhood Context &mdash; ${region.name}</div>
         <div class="usage-row"><span class="k">Equity screening score</span><span class="v">${region.equityScore}/100</span></div>
         <div class="usage-row"><span class="k">Transit stop density</span><span class="v">${region.density}/sq mi</span></div>
         <div class="usage-row"><span class="k">Regional delay index</span><span class="v">${region.delayIndex}/100</span></div>
+        ${region.isRural ? '<div class="rural-badge">Rural Service Gap &mdash; Caltrans Coordination Priority</div>' : ''}
       </div>` : '';
     return `
       <div class="metric-card">
@@ -657,14 +700,15 @@
         </div>
         <div class="owner-line">Owner / Operator: ${stop.owner}${region ? ` &middot; ${region.name}` : ''}</div>
         <div class="description-text">${stop.description}</div>
+        <div style="margin-top:8px;">${calItpBadge}</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Inventory</div>
         <div class="inventory-grid">
           ${inventoryItem('Shelter', inv.shelter)}${inventoryItem('Bench', inv.bench)}
           ${inventoryItem('Lighting', inv.lighting)}${inventoryItem('Real-time signage', inv.realTimeSignage)}
-          ${inventoryItem('Bike rack', inv.bikeRack)}${inventoryItem('ADA accessible', inv.ada)}
-          ${inventoryItem('Trash receptacle', inv.trash)}
+          ${inventoryItem('Contactless payment', inv.contactlessPayment)}${inventoryItem('Bike rack', inv.bikeRack)}
+          ${inventoryItem('ADA accessible', inv.ada)}${inventoryItem('Trash receptacle', inv.trash)}
         </div>
       </div>
       <div class="metric-card">
@@ -683,9 +727,16 @@
     `;
   }
 
+  function tierDeadline(tier) {
+    if (tier === 1) return 'FY 2026\u201327 (Tier 1)';
+    if (tier === 2) return 'FY 2027\u201328 (Tier 2)';
+    return 'Not yet scheduled (Tier 3)';
+  }
+
   function renderRegionCard(region) {
     const rank = GAP_RANKING.findIndex(r => r.name === region.name) + 1;
-    const rankHtml = rank <= 5 ? `<div class="rank-badge">#${rank} highest transit gap priority in San Diego County</div>` : '';
+    const rankHtml = rank <= 5 ? `<div class="rank-badge">#${rank} on the State Transit Priority List</div>` : '';
+    const ruralHtml = region.isRural ? `<div class="rural-badge">Rural Service Gap &mdash; Caltrans Coordination Priority</div>` : '';
     return `
       <div class="metric-card">
         <div class="inspector-header">
@@ -693,7 +744,9 @@
           <span class="type-badge" style="background:${equityColor(region.equityScore)};">County Region</span>
         </div>
         <div class="owner-line">County: ${region.county} &middot; Population: ${fmtNum(region.population)}</div>
+        <div><span class="tier-badge tier-${region.priorityTier}">Priority Tier ${region.priorityTier}</span><span class="tier-badge" style="background:#f2f4f6; color:var(--muted);">${tierDeadline(region.priorityTier)}</span></div>
         ${rankHtml}
+        ${ruralHtml}
       </div>
       <div class="metric-grid">
         <div class="metric-card">
@@ -708,6 +761,23 @@
       <div class="metric-card">
         <div class="metric-label">Delay Index</div>
         <div class="metric-value">${region.delayIndex}<span class="unit">/100</span></div>
+      </div>
+    `;
+  }
+
+  function renderPriorityListCard() {
+    const top5 = GAP_RANKING.slice(0, 5);
+    const rows = top5.map((r, i) => `
+      <div class="flag-item">
+        <span>${i+1}. ${r.name}${r.isRural ? ' &middot; rural' : ''}</span>
+        <span><span class="tag ${r.priorityTier === 1 ? '' : 'ok'}">Tier ${r.priorityTier}</span></span>
+      </div>
+    `).join('');
+    return `
+      <div class="section-title">State Transit Priority List</div>
+      <div class="metric-card">
+        <div class="metric-label">Top 5 Statewide Priority Regions</div>
+        <div class="flag-list">${rows}</div>
       </div>
     `;
   }
@@ -736,7 +806,7 @@
     const body = document.getElementById('analyticsBody');
     const routeHtml = renderRouteSection();
     if (!selectedItem) {
-      body.innerHTML = (routeHtml ? '' : '<div class="empty-note">Click a stop or region on the map to view details.</div>') + routeHtml;
+      body.innerHTML = renderPriorityListCard() + (routeHtml || '<div class="empty-note">Click a stop or region on the map to view details.</div>') ;
       return;
     }
     const card = selectedItem.kind === 'stop' ? renderStopCard(selectedItem.data) : renderRegionCard(selectedItem.data);
@@ -764,6 +834,7 @@
     const t = text.toLowerCase();
     const notes = [];
     if (t.includes('light rail') || t.includes('rail route')) { setRailLayer(true); notes.push('Showing light rail & passenger rail routes on the map.'); }
+    if (t.includes('bus rapid transit') || t.includes('brt') || t.includes('bus-only lane') || t.includes('bus only lane')) { setBrtLayer(true); notes.push('Showing Bus Rapid Transit corridors on the map.'); }
     if (t.includes('heat map') || t.includes('delay')) { setHeatLayer(true); notes.push('Colored the transit routes by delay (purple = low, red = high).'); }
     if (t.includes('density') || t.includes('equity') || t.includes('gap') || t.includes('county')) {
       setRegionLayer(true, true);
@@ -788,18 +859,25 @@
   function generateAssistantReply(text) {
     const t = text.toLowerCase();
 
-    // Equity + density gap question (San Diego County)
-    if ((t.includes('equity') || t.includes('screening') || t.includes('gap')) && (t.includes('density') || t.includes('transit') || t.includes('san diego') || t.includes('county'))) {
+    // Equity + density gap question (San Diego County) -- framed as the EO's
+    // "state priority list" of transit projects
+    if ((t.includes('equity') || t.includes('screening') || t.includes('gap') || t.includes('priority')) && (t.includes('density') || t.includes('transit') || t.includes('san diego') || t.includes('county'))) {
       const top5 = GAP_RANKING.slice(0, 5)
-        .map((r, i) => `${i + 1}. ${r.name} -- equity ${r.equityScore}/100, density ${r.density}/sq mi`)
+        .map((r, i) => `${i + 1}. ${r.name} -- equity ${r.equityScore}/100, density ${r.density}/sq mi, Tier ${r.priorityTier}${r.isRural ? ', rural service gap' : ''}`)
         .join('\n');
-      return `San Diego County areas with the highest equity screening scores and the lowest transit stop density (highest transit gap priority):\n\n${top5}\n\nThe backcountry and rural desert communities (Borrego Springs, Julian, Ramona) and the San Ysidro border community show the sharpest mismatch between need and service. Map switched to the San Diego County region view.${selectedContextNote()}`;
+      return `State Transit Priority List -- San Diego County areas with the highest equity screening scores and the lowest transit stop density:\n\n${top5}\n\nThe backcountry and rural desert communities (Borrego Springs, Julian, Ramona) and the San Ysidro border community show the sharpest mismatch between need and service, consistent with the EO's directive to close transit gaps in rural counties and underserved neighborhoods. Map switched to the San Diego County region view.${selectedContextNote()}`;
     }
 
     // Light rail routes
     if (t.includes('light rail') || t.includes('rail route')) {
       const list = ROUTES.map(r => `- ${r.name} (${r.county} County)`).join('\n');
       return `Light rail and passenger rail routes currently loaded:\n\n${list}\n\nI've drawn all of these on the map canvas.${selectedContextNote()}`;
+    }
+
+    // Bus Rapid Transit / bus-only lanes
+    if (t.includes('bus rapid transit') || t.includes('brt') || t.includes('bus-only lane') || t.includes('bus only lane')) {
+      const list = BRT_CORRIDORS.map(r => `- ${r.name}`).join('\n');
+      return `Bus Rapid Transit corridors currently loaded:\n\n${list}\n\nThese reflect the EO's directive to expand BRT and bus-only lanes on the state highway system. I've drawn them on the map.${selectedContextNote()}`;
     }
 
     // Delay / heat map
@@ -832,7 +910,7 @@
     }
 
     // Fallback
-    return `I can answer questions using the data loaded in this workspace: 14 stops around Coronado/San Diego (inventory, usage, ownership) and 20 San Diego County regions (equity score, transit density, delay index).\n\nTry one of the prompts above, or ask about a specific stop or region you've clicked on the map.${selectedContextNote()}`;
+    return `I can answer questions using the data loaded in this workspace: 14 stops around Coronado/San Diego (inventory, usage, ownership, Cal-ITP compliance), 20 San Diego County regions (equity score, transit density, delay index, State Transit Priority List tier), light rail routes, and Bus Rapid Transit corridors.\n\nTry one of the prompts above, or ask about a specific stop or region you've clicked on the map.${selectedContextNote()}`;
   }
 
   function sendMessage() {
