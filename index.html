@@ -382,10 +382,7 @@
           <button id="addModeBtn" class="pill-btn">+ Add stop</button>
           <button id="railBtn" class="pill-btn">Light rail</button>
           <button id="brtBtn" class="pill-btn">BRT lanes</button>
-          <button id="heatBtn" class="pill-btn">Delay heat</button>
-          <button id="regionBtn" class="pill-btn">County Regions</button>
-          <button id="undoBtn" class="pill-btn">Undo</button>
-          <button id="clearBtn" class="pill-btn">Clear</button>
+          <button id="heatBtn" class="pill-btn">Delays</button>
         </div>
         <div class="map-hint" id="mapHint">Click any marker to view its details</div>
       </div>
@@ -588,7 +585,8 @@
 
   let selectedItem = null; // { kind: 'stop' | 'region', data }
 
-  const map = L.map('map', { zoomControl: true }).setView([32.6975, -117.1611], 12);
+  const map = L.map('map', { zoomControl: false }).setView([32.6975, -117.1611], 12);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO', maxZoom: 20
   }).addTo(map);
@@ -739,7 +737,6 @@
   const railBtn = document.getElementById('railBtn');
   const brtBtn = document.getElementById('brtBtn');
   const heatBtn = document.getElementById('heatBtn');
-  const regionBtn = document.getElementById('regionBtn');
   const mapHint = document.getElementById('mapHint');
 
   addModeBtn.addEventListener('click', () => {
@@ -764,7 +761,6 @@
     else map.removeLayer(heatLayerGroup);
   }
   function setRegionLayer(on, fly) {
-    regionBtn.classList.toggle('active', on);
     if (on) { regionLayerGroup.addTo(map); if (fly) fitToCoords(visibleRegions().map(r=>[r.lat,r.lng])); }
     else map.removeLayer(regionLayerGroup);
   }
@@ -776,13 +772,6 @@
   railBtn.addEventListener('click', () => setRailLayer(!map.hasLayer(railLayerGroup)));
   brtBtn.addEventListener('click', () => setBrtLayer(!map.hasLayer(brtLayerGroup)));
   heatBtn.addEventListener('click', () => setHeatLayer(!map.hasLayer(heatLayerGroup)));
-  regionBtn.addEventListener('click', () => setRegionLayer(!map.hasLayer(regionLayerGroup), true));
-
-  document.getElementById('undoBtn').addEventListener('click', () => { if (proposedStops.length) removeProposed(proposedStops[proposedStops.length-1].id); });
-  document.getElementById('clearBtn').addEventListener('click', () => {
-    [...proposedStops].forEach(s => map.removeLayer(s.marker));
-    proposedStops.length = 0; redrawLine(); updateAnalyticsPanel();
-  });
 
   // ---------------- ANALYTICS ----------------
   function haversineKm(lat1, lon1, lat2, lon2) {
