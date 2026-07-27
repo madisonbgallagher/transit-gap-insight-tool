@@ -356,6 +356,7 @@
         <button class="prompt-chip" data-prompt="What is the transit stop density in my county?">What is the transit stop density in my county?</button>
         <button class="prompt-chip" data-prompt="Where is transit most consistently delayed? Show me a heat map.">Where is transit most consistently delayed? Show me a heat map.</button>
         <button class="prompt-chip" data-prompt="What areas of San Diego County have the highest equity screening scores and the least density of transit?">What areas of San Diego County have the highest equity screening scores and the least density of transit?</button>
+        <button class="prompt-chip" data-prompt="What funding deadlines are coming up?">What funding deadlines are coming up?</button>
       </div>
       <div class="chat-body" id="chatBody">
         <div class="msg system-note">Ask about a stop or region you clicked, or try a prompt above.</div>
@@ -583,6 +584,53 @@
       coords: [[33.1959,-117.3795],[33.2000,-117.2425],[33.1434,-117.1661],[33.1192,-117.0864]] }
   ];
 
+  // ---------------- FUNDING PROGRAMS (illustrative) ----------------
+  const GRANT_PROGRAMS = [
+    { abbr: 'TIRCP', name: 'Transit and Intercity Rail Capital Program', agency: 'CalSTA', award: '$5M\u2013$50M', tags: ['rail','brt','capital'], deadline: '2026-09-15' },
+    { abbr: 'ATP', name: 'Active Transportation Program', agency: 'California Transportation Commission', award: '$500K\u2013$10M', tags: ['equity','rural','capital'], deadline: '2026-08-30' },
+    { abbr: 'ZETCP', name: 'Zero-Emission Transit Capital Program', agency: 'CalSTA', award: '$1M\u2013$20M', tags: ['capital','zero-emission','brt'], deadline: '2026-10-31' },
+    { abbr: 'LPP', name: 'Local Partnership Program', agency: 'California Transportation Commission', award: '$1M\u2013$25M', tags: ['rail','brt','capital'], deadline: '2026-12-15' },
+    { abbr: 'SCCP', name: 'Solutions for Congested Corridors Program', agency: 'California Transportation Commission', award: '$2M\u2013$40M', tags: ['brt','capital'], deadline: '2027-01-31' },
+    { abbr: 'STA', name: 'State Transit Assistance', agency: 'Caltrans', award: 'Formula-based', tags: ['operating','rural','equity'], deadline: '2026-08-15' },
+    { abbr: 'SRA', name: 'State Rail Assistance', agency: 'CalSTA', award: '$500K\u2013$15M', tags: ['rail','capital','operating'], deadline: '2026-11-15' },
+    { abbr: 'AHSC', name: 'Affordable Housing and Sustainable Communities (transit component)', agency: 'Strategic Growth Council / Caltrans', award: '$1M\u2013$15M', tags: ['equity','rural','capital'], deadline: '2026-09-30' }
+  ];
+
+  function daysUntil(dateStr) {
+    const ms = new Date(dateStr + 'T00:00:00') - new Date();
+    return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  }
+
+  function matchFundingPrograms(item, kind) {
+    const tags = new Set(['capital']);
+    if (kind === 'region') {
+      if (item.isRural) tags.add('rural');
+      if (item.equityScore >= 65) tags.add('equity');
+      if (item.priorityTier <= 2) { tags.add('rail'); tags.add('brt'); }
+    } else {
+      const region = item.region;
+      if (region && region.isRural) tags.add('rural');
+      if (region && region.equityScore >= 65) tags.add('equity');
+      if (item.type === 'Trolley Station' || item.type === 'Multimodal Hub') tags.add('rail');
+      if (item.type === 'Bus Stop' || item.type === 'Park & Ride') tags.add('brt');
+      tags.add('operating');
+    }
+    return GRANT_PROGRAMS
+      .filter(p => p.tags.some(t => tags.has(t)))
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+  }
+
+  function deadlineBadgeClass(days) {
+    if (days < 0) return 'condition-poor';
+    if (days <= 14) return 'condition-poor';
+    if (days <= 45) return 'condition-fair';
+    return 'condition-good';
+  }
+  function fmtDeadline(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
   let selectedItem = null; // { kind: 'stop' | 'region', data }
 
   const map = L.map('map', { zoomControl: false }).setView([32.6975, -117.1611], 12);
@@ -801,6 +849,24 @@
   function conditionClass(r){ return r==='Good'?'condition-good':r==='Fair'?'condition-fair':'condition-poor'; }
   function inventoryItem(label, value){ return `<div class="inventory-item ${value?'yes':'no'}"><span class="mark">${value?'\u2713':'\u2013'}</span>${label}</div>`; }
 
+  function renderFundingCard(item, kind) {
+    const matches = matchFundingPrograms(item, kind).slice(0, 3);
+    if (!matches.length) return '';
+    const rows = matches.map(p => {
+      const days = daysUntil(p.deadline);
+      return `
+      <div class="flag-item">
+        <span>${p.abbr} &middot; ${p.award}</span>
+        <span class="condition-badge ${deadlineBadgeClass(days)}" style="font-size:10px; padding:2px 7px;">${fmtDeadline(p.deadline)}</span>
+      </div>`;
+    }).join('');
+    return `
+      <div class="metric-card">
+        <div class="metric-label">Eligible Funding</div>
+        <div class="flag-list">${rows}</div>
+      </div>`;
+  }
+
   function renderStopCard(stop) {
     const style = TYPE_STYLES[stop.type] || { color:'#333' };
     const inv = stop.inventory, usage = stop.usage, cond = stop.condition;
@@ -842,6 +908,7 @@
         <div class="routes-list">${usage.connectingRoutes.map(r=>`<span class="route-chip">${r}</span>`).join('')}</div>
       </div>
       ${regionHtml}
+      ${renderFundingCard(stop, 'stop')}
       <div class="metric-card">
         <div class="metric-label">Condition</div>
         <div class="usage-row"><span class="k">Last inspected</span><span class="v" style="font-family:var(--mono); font-size:12px;">${cond.lastInspected}</span></div>
@@ -885,6 +952,7 @@
         <div class="metric-label">Delay Index</div>
         <div class="metric-value">${region.delayIndex}<span class="unit">/100</span></div>
       </div>
+      ${renderFundingCard(region, 'region')}
     `;
   }
 
@@ -926,11 +994,31 @@
     `;
   }
 
+  function renderDeadlinesCard() {
+    const sorted = [...GRANT_PROGRAMS].sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+    const upcoming = sorted.filter(p => daysUntil(p.deadline) >= 0).slice(0, 5);
+    const rows = upcoming.map(p => {
+      const days = daysUntil(p.deadline);
+      return `
+      <div class="flag-item">
+        <span>${p.abbr} &middot; ${fmtDeadline(p.deadline)}</span>
+        <span class="condition-badge ${deadlineBadgeClass(days)}" style="font-size:10px; padding:2px 7px;">${days} day${days === 1 ? '' : 's'}</span>
+      </div>`;
+    }).join('');
+    return `
+      <div class="section-title">Upcoming Funding Deadlines</div>
+      <div class="metric-card">
+        <div class="metric-label">Next 5 Statewide Deadlines</div>
+        <div class="flag-list">${rows || '<div class="flag-item"><span>No upcoming deadlines in this illustrative dataset.</span></div>'}</div>
+      </div>
+    `;
+  }
+
   function updateAnalyticsPanel() {
     const body = document.getElementById('analyticsBody');
     const routeHtml = renderRouteSection();
     if (!selectedItem) {
-      body.innerHTML = renderPriorityListCard() + (routeHtml || '<div class="empty-note">Click a stop or region on the map to view details.</div>') ;
+      body.innerHTML = renderPriorityListCard() + renderDeadlinesCard() + (routeHtml || '<div class="empty-note">Click a stop or region on the map to view details.</div>') ;
       return;
     }
     const card = selectedItem.kind === 'stop' ? renderStopCard(selectedItem.data) : renderRegionCard(selectedItem.data);
@@ -983,6 +1071,19 @@
 
   function generateAssistantReply(text) {
     const t = text.toLowerCase();
+
+    // Funding / grant deadline questions
+    if (t.includes('funding') || t.includes('grant') || t.includes('deadline')) {
+      if (selectedItem && (t.includes('qualify') || t.includes('eligible') || t.includes('this'))) {
+        const matches = matchFundingPrograms(selectedItem.data, selectedItem.kind).slice(0, 4);
+        if (!matches.length) return `No strong funding matches for ${selectedItem.data.name} in this illustrative dataset.${selectedContextNote()}`;
+        const lines = matches.map(p => `- ${p.abbr} (${p.name}) -- ${p.award}, next deadline ${fmtDeadline(p.deadline)} (${daysUntil(p.deadline)} days away)`).join('\n');
+        return `${selectedItem.data.name} appears eligible for:\n\n${lines}\n\nThese are illustrative matches based on rural/equity/mode tags in the prototype's dummy data, not a real eligibility determination.${selectedContextNote()}`;
+      }
+      const sorted = [...GRANT_PROGRAMS].sort((a, b) => new Date(a.deadline) - new Date(b.deadline)).filter(p => daysUntil(p.deadline) >= 0).slice(0, 5);
+      const lines = sorted.map(p => `- ${p.abbr} (${p.name}) -- due ${fmtDeadline(p.deadline)}, ${daysUntil(p.deadline)} days away`).join('\n');
+      return `Upcoming statewide funding deadlines:\n\n${lines}\n\nClick a stop or region on the map, then ask "what funding could this qualify for" for a tailored match.${selectedContextNote()}`;
+    }
 
     // Impact of the user's proposed (map-plotted) stops
     if ((t.includes('impact') || t.includes('these stops') || t.includes('these new') || t.includes('proposed stops') || t.includes('new stops')) && t.includes('transit')) {
@@ -1168,6 +1269,14 @@
       <tr><td>${i+1}</td><td>${r.name}</td><td>${r.equityScore}/100</td><td>${r.density}/sq mi</td><td>Tier ${r.priorityTier}</td><td>${r.isRural ? 'Yes' : ''}</td></tr>
     `).join('');
     const suggestionLines = top3.map((r, i) => `<div class="eo-line">${i+1}. <strong>${r.name}</strong> &mdash; suggest a new stop near this centroid; ${r.isRural ? 'a rural service gap area with' : 'an underserved area with'} equity score ${r.equityScore}/100 and density ${r.density}/sq mi.</div>`).join('');
+
+    const fundingMap = new Map();
+    top5.forEach(r => { matchFundingPrograms(r, 'region').forEach(p => { if (!fundingMap.has(p.abbr)) fundingMap.set(p.abbr, p); }); });
+    const fundingMatches = [...fundingMap.values()].sort((a, b) => new Date(a.deadline) - new Date(b.deadline)).slice(0, 5);
+    const fundingRows = fundingMatches.map(p => `
+      <tr><td>${p.abbr}</td><td>${p.name}</td><td>${p.agency}</td><td>${p.award}</td><td>${fmtDeadline(p.deadline)} (${daysUntil(p.deadline)}d)</td></tr>
+    `).join('');
+
     document.getElementById('printBrief').innerHTML = `
       <h1>State Transit Priority Brief</h1>
       <div class="p-sub">CalSTA Data Hub &middot; Transit Gap Insight Tool &middot; ${scopeLabel} &middot; Generated ${dateStr}</div>
@@ -1182,9 +1291,15 @@
         <tr><th>Rank</th><th>Region</th><th>Equity Score</th><th>Transit Density</th><th>Priority Tier</th><th>Rural Gap</th></tr>
         ${rows}
       </table>
+      <h2>Funding Alignment &amp; Upcoming Deadlines</h2>
+      <table>
+        <tr><th>Program</th><th>Name</th><th>Agency</th><th>Typical Award</th><th>Next Deadline</th></tr>
+        ${fundingRows || '<tr><td colspan="5">No matching programs in this illustrative dataset.</td></tr>'}
+      </table>
+      <div class="eo-line">Matched by rural, equity, and mode eligibility tags against the top 5 priority regions above &mdash; act before the earliest listed deadline to avoid missing this funding cycle.</div>
       <h2>How This Corridor Meets the Executive Order's Goals</h2>
       <div class="eo-line">${buildEoNarrative(scopeLabel, top5, top3)}</div>
-      <div class="p-footer">Data note: equity, density, delay, and Cal-ITP figures are illustrative placeholders for this prototype. Suggested stops and the proposed corridor are generated by connecting top-ranked priority areas and are not an engineering-grade site selection or alignment study. Hosted on the CalSTA Data Hub.</div>
+      <div class="p-footer">Data note: equity, density, delay, Cal-ITP, and funding figures are illustrative placeholders for this prototype. Suggested stops and the proposed corridor are generated by connecting top-ranked priority areas and are not an engineering-grade site selection or alignment study. Hosted on the CalSTA Data Hub.</div>
     `;
     window.print();
   });
